@@ -1,0 +1,17 @@
+[package]
+name = "finance_as_code_budget_sink_treeline"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bon.workspace = true
+finance_as_code_budget_core.workspace = true
+treeline-core.workspace = true
+rootcause = { workspace = true, features = ["compat-anyhow1"] }
+dirs.workspace = true
+anyhow.workspace = true
+log.workspace = true
+uuid.workspace = true
+serde_json.workspace = true
+duckdb.workspace = true

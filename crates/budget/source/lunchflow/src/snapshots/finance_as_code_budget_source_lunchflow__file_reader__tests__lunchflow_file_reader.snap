@@ -1,0 +1,52 @@
+---
+source: crates/budget/source/lunchflow/src/file_reader.rs
+expression: transactions
+---
+TransactionHolder {
+    variants: WithItems(
+        TransactionsHolderWithItems {
+            transactions: [
+                [
+                    BankTransaction {
+                        date: 2026-02-12,
+                        description: "Merchant 1 | Description 1",
+                        amount: Money {
+                            amount: -14.98,
+                            currency: Currency {
+                                iso_alpha_code: "PLN",
+                                exponent: 2,
+                                iso_numeric_code: "985",
+                                locale: EnBy,
+                                minor_units: 1,
+                                name: "Polish Złoty",
+                                symbol: "zł",
+                                symbol_first: false,
+                            },
+                        },
+                        other_side_account_number: None,
+                    },
+                    BankTransaction {
+                        date: 2026-02-12,
+                        description: "Merchant 2 | ",
+                        amount: Money {
+                            amount: -17.85,
+                            currency: Currency {
+                                iso_alpha_code: "PLN",
+                                exponent: 2,
+                                iso_numeric_code: "985",
+                                locale: EnBy,
+                                minor_units: 1,
+                                name: "Polish Złoty",
+                                symbol: "zł",
+                                symbol_first: false,
+                            },
+                        },
+                        other_side_account_number: None,
+                    },
+                ],
+            ],
+            start_date: 2026-02-12,
+            end_date: 2026-02-12,
+        },
+    ),
+}

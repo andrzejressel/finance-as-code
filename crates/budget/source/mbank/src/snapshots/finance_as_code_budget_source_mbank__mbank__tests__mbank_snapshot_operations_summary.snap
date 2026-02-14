@@ -1,0 +1,107 @@
+---
+source: crates/budget/source/mbank/src/mbank.rs
+expression: transactions
+---
+TransactionHolder {
+    variants: WithItems(
+        TransactionsHolderWithItems {
+            transactions: [
+                [
+                    BankTransaction {
+                        date: 2025-12-01,
+                        description: "BLIK ZAKUP E-COMMERCE | Tytul 1",
+                        amount: Money {
+                            amount: -10.00,
+                            currency: Currency {
+                                iso_alpha_code: "PLN",
+                                exponent: 2,
+                                iso_numeric_code: "985",
+                                locale: EnBy,
+                                minor_units: 1,
+                                name: "Polish Złoty",
+                                symbol: "zł",
+                                symbol_first: false,
+                            },
+                        },
+                        other_side_account_number: None,
+                    },
+                    BankTransaction {
+                        date: 2025-12-01,
+                        description: "PRZELEW ZEWNĘTRZNY WYCHODZĄCY | Tytul 2 | Name Surname",
+                        amount: Money {
+                            amount: -1000.00,
+                            currency: Currency {
+                                iso_alpha_code: "PLN",
+                                exponent: 2,
+                                iso_numeric_code: "985",
+                                locale: EnBy,
+                                minor_units: 1,
+                                name: "Polish Złoty",
+                                symbol: "zł",
+                                symbol_first: false,
+                            },
+                        },
+                        other_side_account_number: Some(
+                            NonEmptyString(
+                                "61109010140000071219812874",
+                            ),
+                        ),
+                    },
+                ],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [
+                    BankTransaction {
+                        date: 2025-12-29,
+                        description: "PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY | Tytul 3",
+                        amount: Money {
+                            amount: 2.71,
+                            currency: Currency {
+                                iso_alpha_code: "PLN",
+                                exponent: 2,
+                                iso_numeric_code: "985",
+                                locale: EnBy,
+                                minor_units: 1,
+                                name: "Polish Złoty",
+                                symbol: "zł",
+                                symbol_first: false,
+                            },
+                        },
+                        other_side_account_number: Some(
+                            NonEmptyString(
+                                "61109010140000071219812874",
+                            ),
+                        ),
+                    },
+                ],
+            ],
+            start_date: 2025-12-01,
+            end_date: 2025-12-29,
+        },
+    ),
+}

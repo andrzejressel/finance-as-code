@@ -1,0 +1,24 @@
+[package]
+name = "finance_as_code_budget_source_lunchflow"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+finance_as_code_budget_core.workspace = true
+bon.workspace = true
+rootcause.workspace = true
+rusty-money.workspace = true
+rust_decimal.workspace = true
+chrono.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+httpmock.workspace = true
+googletest.workspace = true
+tempfile.workspace = true
+mockall.workspace = true

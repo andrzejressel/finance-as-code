@@ -1,0 +1,61 @@
+[workspace.package]
+version = "0.0.0-DEV"
+edition = "2024"
+license = "AGPL-3"
+
+[workspace]
+resolver = "3"
+members = [
+    "crates/budget/core",
+    "crates/budget/root", 
+    "crates/budget/sink/*",
+    "crates/budget/source/*",
+    "crates/utils/*",
+]
+
+[workspace.dependencies]
+finance_as_code_budget_core = { path = "crates/budget/core" }
+finance_as_code_budget_source_mbank = { path = "crates/budget/source/mbank" }
+finance_as_code_budget_source_lunchflow = { path = "crates/budget/source/lunchflow" }
+finance_as_code_utils_chrono = { path = "crates/utils/chrono" }
+finance_as_code_budget_sink_treeline = { path = "crates/budget/sink/treeline" }
+
+iced = { version = "0.14.0", features = ["debug", "time-travel", "tokio", "canvas"] }
+iced_graphics = { version = "0.14.0" }
+iced_aksel = "0.2.0"
+iced_test = "0.14.0"
+rootcause = { version = "0.12.0" }
+bon = "3.8.2"
+calamine = "0.33.0"
+csv = "1.3"
+encoding_rs = "0.8"
+regex = "1"
+serde = { version = "1.0.228", features = ["derive"] }
+insta = { version = "1.46.1" }
+rusty-money = { version = "0.5.0", features = ["iso", "crypto", "fast", "serde"] }
+chrono = { version = "0.4.43", features = ["serde"] }
+chrono-tz = "0.10.4"
+nonempty-collections = { version = "1.3.0", features = ["serde"] }
+rust_decimal = { version = "1.40.0", features = ["macros", "serde"] }
+treeline-core = { git = "https://github.com/andrzejressel/treeline", rev = "9b6685bf00d3041140f253a99b49dc4b2671d8d0" }
+assertor = "0.0.4"
+arbitrary = "1.4.2"
+uuid = { version = "1.19.0", features = ["serde", "v4", "v5", "v7", "v8"] }
+duckdb = { version = "1.4.3", features = ["bundled", "json", "chrono"] }
+natord = "1.0.9"
+tokio = {version = "1.49.0", features = ["full"]}
+tokio-stream = {version = "0.1.18", features = ["full"]}
+mockall = "0.14.0"
+sipper = "0.1.0"
+lilt = '0.8.1'
+async-trait = "0.1.89"
+googletest = "0.14.2"
+tempfile = "3.24.0"
+dirs = "6.0.0"
+anyhow = "1.0.100"
+log = "0.4.29"
+colog = "1.4.0"
+serde_json = "1.0.149"
+itertools = "0.14.0"
+httpmock = "0.8.3"
+reqwest = {version = "0.13.2", features = ["blocking", "json", "query"]}

@@ -1,0 +1,8 @@
+[package]
+name = "finance_as_code_utils_chrono"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono.workspace = true

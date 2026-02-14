@@ -1,0 +1,1 @@
+DELETE FROM sys_transactions WHERE account_id = ?;

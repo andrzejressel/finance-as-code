@@ -1,0 +1,29 @@
+[package]
+name = "finance_as_code_budget_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bon.workspace = true
+rootcause.workspace = true
+rusty-money.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+nonempty-collections.workspace = true
+serde.workspace = true
+uuid.workspace = true
+natord.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+sipper.workspace = true
+async-trait.workspace = true
+mockall.workspace = true
+log.workspace = true
+itertools.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+mockall.workspace = true
+finance_as_code_utils_chrono.workspace = true
+googletest.workspace = true
+tempfile.workspace = true

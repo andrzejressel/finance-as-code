@@ -1,0 +1,5 @@
+---
+source: crates/budget/source/lunchflow/src/downloader.rs
+expression: content
+---
+{"transactions":[{"id":"txn_123","accountId":1,"amount":100.0,"currency":"USD","date":"2024-01-01","merchant":"Example Store","description":"Purchase at Example Store","isPending":false}]}

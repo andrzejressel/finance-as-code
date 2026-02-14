@@ -1,0 +1,25 @@
+{
+  "transactions": [
+    {
+      "id": "123",
+      "accountId": 123,
+      "amount": -14.98,
+      "currency": "PLN",
+      "date": "2026-02-12",
+      "merchant": "Merchant 1",
+      "description": "Description 1",
+      "isPending": false
+    },
+    {
+      "id": "xyz",
+      "accountId": 123,
+      "amount": -17.85,
+      "currency": "PLN",
+      "date": "2026-02-12",
+      "merchant": "Merchant 2",
+      "description": "",
+      "isPending": true
+    }
+  ],
+  "total": 2
+}

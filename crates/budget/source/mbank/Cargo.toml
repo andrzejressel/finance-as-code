@@ -1,0 +1,20 @@
+[package]
+name = "finance_as_code_budget_source_mbank"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+finance_as_code_budget_core.workspace = true
+bon.workspace = true
+rootcause.workspace = true
+rusty-money.workspace = true
+rust_decimal.workspace = true
+regex.workspace = true
+csv.workspace = true
+encoding_rs.workspace = true
+chrono.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+insta.workspace = true

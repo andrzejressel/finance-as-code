@@ -1,0 +1,1 @@
+DELETE FROM sys_balance_snapshots WHERE account_id = ?;

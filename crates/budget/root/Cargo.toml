@@ -1,0 +1,20 @@
+[package]
+name = "finance_as_code_budget"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+source_lunchflow = ["dep:finance_as_code_budget_source_lunchflow"]
+source_mbank = ["dep:finance_as_code_budget_source_mbank"]
+sink_treeline = ["dep:finance_as_code_budget_sink_treeline"]
+
+all = ["source_lunchflow", "source_mbank", "sink_treeline"]
+
+[dependencies]
+finance_as_code_budget_core.workspace = true
+finance_as_code_budget_source_lunchflow = { workspace = true, optional = true }
+finance_as_code_budget_source_mbank = { workspace = true, optional = true }
+finance_as_code_budget_sink_treeline = { workspace = true, optional = true }
+rootcause.workspace = true
+colog.workspace = true
+log.workspace = true
