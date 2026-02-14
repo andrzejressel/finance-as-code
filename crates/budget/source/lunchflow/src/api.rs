@@ -47,7 +47,11 @@ impl LunchFlowApi for RealLunchFlowApi {
     fn get_transactions(&self, account_id: &LunchFlowAccountId) -> Result<LunchFlowTransactions> {
         let response = self
             .client
-            .get(&format!("{}/accounts/{}/transactions", self.url, account_id.value()))
+            .get(format!(
+                "{}/accounts/{}/transactions",
+                self.url,
+                account_id.value()
+            ))
             .header("x-api-key", self.api_key.value())
             // .query(&[("accountId", )])
             .send()

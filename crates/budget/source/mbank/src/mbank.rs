@@ -2,9 +2,8 @@ use bon::Builder;
 use chrono::NaiveDate;
 use encoding_rs::WINDOWS_1250;
 use finance_as_code_budget_core::{
-    BankTransaction, FileReader, NonEmptyString, Transaction, TransactionHolder,
+    BankTransaction, FileReader, NonEmptyString, TransactionHolder,
 };
-use log::info;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
 use rootcause::*;
@@ -31,7 +30,7 @@ fn parse_amount(amount_str: &str) -> Result<Decimal> {
     // Filter out chars that are not digits, dot or minus
     let clean_str: String = normalized
         .chars()
-        .filter(|c| c.is_digit(10) || *c == '.' || *c == '-')
+        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
         .collect();
 
     let value = Decimal::from_str(&clean_str)

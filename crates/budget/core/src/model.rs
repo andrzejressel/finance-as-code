@@ -1,4 +1,4 @@
-use chrono::{Datelike, Month, Months};
+use chrono::{Datelike, Months};
 use std::fmt::Display;
 use uuid::Uuid;
 
@@ -29,7 +29,7 @@ pub struct MonthYear {
 
 impl MonthYear {
     pub fn new(month: u32, year: i32) -> Self {
-        if month < 1 || month > 12 {
+        if !(1..=12).contains(&month) {
             panic!("Month must be between 1 and 12");
         }
         MonthYear { month, year }

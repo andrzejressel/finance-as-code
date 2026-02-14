@@ -10,11 +10,11 @@ use log::info;
 use rootcause::prelude::ResultExt;
 
 #[cfg(feature = "source_lunchflow")]
+pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
+#[cfg(feature = "source_lunchflow")]
 pub use finance_as_code_budget_source_lunchflow::create_lunchflow_downloader;
 #[cfg(feature = "source_lunchflow")]
 pub use finance_as_code_budget_source_lunchflow::create_lunchflow_file_reader;
-#[cfg(feature = "source_lunchflow")]
-pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
 
 #[cfg(feature = "sink_treeline")]
 pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;

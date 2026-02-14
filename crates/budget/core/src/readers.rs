@@ -1,5 +1,5 @@
 use crate::{FileReader, TransactionHolder};
-use log::{info, log};
+use log::info;
 use rootcause::prelude::ResultExt;
 use rootcause::{Result, bail};
 use std::path::PathBuf;
@@ -58,8 +58,8 @@ impl Source for LocalDirectorySource {
 
         paths.sort_by(|p1, p2| {
             natord::compare(
-                &p1.file_name().unwrap().to_str().unwrap(),
-                &p2.file_name().unwrap().to_str().unwrap(),
+                p1.file_name().unwrap().to_str().unwrap(),
+                p2.file_name().unwrap().to_str().unwrap(),
             )
         });
 

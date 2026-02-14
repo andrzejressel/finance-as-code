@@ -107,11 +107,11 @@ fn combine_holders(
 
             let _ = combined_transactions.splice(
                 relative_start_date_h1..=relative_end_date_h1,
-                h1.transactions.into_iter(),
+                h1.transactions,
             );
             let _ = combined_transactions.splice(
                 relative_start_date_h2..=relative_end_date_h2,
-                h2.transactions.into_iter(),
+                h2.transactions,
             );
 
             TransactionHolderVariants::WithItems(TransactionsHolderWithItems {
@@ -153,10 +153,10 @@ struct TransactionsHolderWithItems {
 mod tests {
     use super::*;
     use crate::NonEmptyString;
-    use finance_as_code_utils_chrono::{date, datetime};
+    use finance_as_code_utils_chrono::date;
     use googletest::prelude::eq;
     use googletest::prelude::*;
-    use googletest::{expect_that, verify_that};
+    use googletest::verify_that;
     use rusty_money::{Money, iso};
 
     #[test]

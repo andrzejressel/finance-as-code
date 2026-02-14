@@ -73,9 +73,9 @@ impl NonEmptyString {
     }
 }
 
-impl Into<String> for NonEmptyString {
-    fn into(self) -> String {
-        self.0
+impl From<NonEmptyString> for String {
+    fn from(val: NonEmptyString) -> Self {
+        val.0
     }
 }
 

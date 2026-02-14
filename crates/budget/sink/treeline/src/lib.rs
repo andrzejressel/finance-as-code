@@ -1,16 +1,14 @@
 use crate::queries::{
-    add_transactions, clean_account, regenerate_balances, to_treeline_transaction,
+    add_transactions, clean_account, regenerate_balances,
 };
 use anyhow::Context;
 use finance_as_code_budget_core::sink::Sink;
-use finance_as_code_budget_core::{BankTransaction, Transaction};
+use finance_as_code_budget_core::Transaction;
 use log::info;
 use rootcause::compat::IntoRootcause;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
 use rootcause::*;
-use treeline_core::Transaction as TreelineTransaction;
-use uuid::Uuid;
 
 mod queries;
 mod utils;

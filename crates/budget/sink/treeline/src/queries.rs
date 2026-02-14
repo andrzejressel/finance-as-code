@@ -1,6 +1,5 @@
 use ::duckdb::Connection;
-use finance_as_code_budget_core::model::AccountId;
-use finance_as_code_budget_core::{BankTransaction, Transaction};
+use finance_as_code_budget_core::Transaction;
 use rootcause::compat::IntoRootcause;
 use rootcause::compat::anyhow1::IntoAnyhow;
 use rootcause::prelude::ResultExt;
@@ -10,9 +9,9 @@ use treeline_core::TreelineContext;
 use treeline_core::adapters::duckdb::DuckDbRepository;
 use uuid::Uuid;
 
-const GENERATE_BALANCES_SQL_QUERY: &'static str = include_str!("generate_balances.sql");
-const REMOVE_ACCOUNT_BALANCES_SQL_QUERY: &'static str = include_str!("remove_account_balances.sql");
-const REMOVE_ACCOUNT_TRANSACTIONS_SQL_QUERY: &'static str =
+const GENERATE_BALANCES_SQL_QUERY: &str = include_str!("generate_balances.sql");
+const REMOVE_ACCOUNT_BALANCES_SQL_QUERY: &str = include_str!("remove_account_balances.sql");
+const REMOVE_ACCOUNT_TRANSACTIONS_SQL_QUERY: &str =
     include_str!("remove_account_transactions.sql");
 
 pub(crate) fn clean_account(context: &TreelineContext, account_id: Uuid) -> Result<()> {

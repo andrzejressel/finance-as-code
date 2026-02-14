@@ -22,9 +22,9 @@ impl LunchFlowAccountId {
     }
 }
 
-impl Into<LunchFlowAccountId> for i64 {
-    fn into(self) -> LunchFlowAccountId {
-        LunchFlowAccountId(self)
+impl From<i64> for LunchFlowAccountId {
+    fn from(val: i64) -> Self {
+        LunchFlowAccountId(val)
     }
 }
 
@@ -41,15 +41,15 @@ impl LunchFlowApiKey {
     }
 }
 
-impl Into<LunchFlowApiKey> for String {
-    fn into(self) -> LunchFlowApiKey {
-        LunchFlowApiKey(self)
+impl From<String> for LunchFlowApiKey {
+    fn from(val: String) -> Self {
+        LunchFlowApiKey(val)
     }
 }
 
-impl Into<LunchFlowApiKey> for &str {
-    fn into(self) -> LunchFlowApiKey {
-        LunchFlowApiKey(self.to_string())
+impl From<&str> for LunchFlowApiKey {
+    fn from(val: &str) -> Self {
+        LunchFlowApiKey(val.to_string())
     }
 }
 
