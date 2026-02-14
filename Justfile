@@ -27,5 +27,8 @@ fmt:
 test:
     cargo nextest run --all-features
 
+test-coverage:
+    cargo llvm-cov nextest --cobertura --output-path covertura.xml --all-features
+
 update-test-snapshots:
     cargo insta test --workspace --accept --test-runner nextest
