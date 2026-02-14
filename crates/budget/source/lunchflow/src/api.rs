@@ -105,9 +105,8 @@ mod tests {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET)
-                .path("/transactions")
-                .header("x-api-key", "test_api_key")
-                .query_param("accountId", "1");
+                .path("/accounts/1/transactions")
+                .header("x-api-key", "test_api_key");
             then.status(200)
                 .header("Content-Type", "application/json")
                 .body(json);
