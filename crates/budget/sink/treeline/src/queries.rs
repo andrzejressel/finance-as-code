@@ -11,8 +11,7 @@ use uuid::Uuid;
 
 const GENERATE_BALANCES_SQL_QUERY: &str = include_str!("generate_balances.sql");
 const REMOVE_ACCOUNT_BALANCES_SQL_QUERY: &str = include_str!("remove_account_balances.sql");
-const REMOVE_ACCOUNT_TRANSACTIONS_SQL_QUERY: &str =
-    include_str!("remove_account_transactions.sql");
+const REMOVE_ACCOUNT_TRANSACTIONS_SQL_QUERY: &str = include_str!("remove_account_transactions.sql");
 
 pub(crate) fn clean_account(context: &TreelineContext, account_id: Uuid) -> Result<()> {
     context

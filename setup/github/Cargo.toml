@@ -1,0 +1,16 @@
+[package]
+name = "finance_as_code_setup_github"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bon.workspace = true
+serde.workspace = true
+pulumi_gestalt_rust.workspace = true
+serde_yaml.workspace = true
+itertools.workspace = true
+
+[build-dependencies]
+pulumi_gestalt_build.workspace = true
