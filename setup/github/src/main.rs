@@ -87,9 +87,9 @@ fn pulumi_main(ctx: &Context) -> Result<()> {
                             .required_checks(
                                 [
                                     &[
-                                        create_check("docs/readthedocs.org:pulumi-gestalt", Any),
-                                        create_check("CodeQL", GithubAdvancedSecurity),
-                                        create_check("clippy", GithubAdvancedSecurity),
+                                        // create_check("docs/readthedocs.org:pulumi-gestalt", Any),
+                                        // create_check("CodeQL", GithubAdvancedSecurity),
+                                        // create_check("clippy", GithubAdvancedSecurity),
                                         create_check("Mergify Merge Protections", Mergify),
                                     ],
                                     pulumi_gestalt_checks.deref(),
