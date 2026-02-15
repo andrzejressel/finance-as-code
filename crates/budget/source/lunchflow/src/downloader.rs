@@ -1,5 +1,5 @@
-use crate::api::LunchFlowApi;
 use crate::LunchFlowAccountId;
+use crate::api::LunchFlowApi;
 use finance_as_code_budget_core::TransactionHolder;
 use finance_as_code_budget_core::readers::Source;
 use log::info;
@@ -97,9 +97,6 @@ mod tests {
     use finance_as_code_budget_core::readers::Source;
     use googletest::assert_that;
     use googletest::prelude::eq;
-    
-    
-    
 
     #[test]
     fn test_lunchflow_downloader() {

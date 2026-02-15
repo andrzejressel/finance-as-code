@@ -1,9 +1,7 @@
-use crate::queries::{
-    add_transactions, clean_account, regenerate_balances,
-};
+use crate::queries::{add_transactions, clean_account, regenerate_balances};
 use anyhow::Context;
-use finance_as_code_budget_core::sink::Sink;
 use finance_as_code_budget_core::Transaction;
+use finance_as_code_budget_core::sink::Sink;
 use log::info;
 use rootcause::compat::IntoRootcause;
 use rootcause::option_ext::OptionExt;

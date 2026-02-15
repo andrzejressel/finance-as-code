@@ -1,9 +1,7 @@
 use bon::Builder;
 use chrono::NaiveDate;
 use encoding_rs::WINDOWS_1250;
-use finance_as_code_budget_core::{
-    BankTransaction, FileReader, NonEmptyString, TransactionHolder,
-};
+use finance_as_code_budget_core::{BankTransaction, FileReader, NonEmptyString, TransactionHolder};
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
 use rootcause::*;

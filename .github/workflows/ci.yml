@@ -24,6 +24,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - run: git config --system core.longpaths true
+        if: runner.os == 'Windows'
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
         env:
@@ -31,6 +33,10 @@ jobs:
       - uses: cargo-bins/cargo-binstall@ec80feb9e330418e014932e5982599255eff6dbb # v1.17.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: brew install pulumi
+        if: runner.os == 'macOS'
+      - run: pulumi version
+      - run: pulumi login --local
       - name: Install requirements
         run: just install-requirements
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
