@@ -6,9 +6,11 @@ edition = "2024"
 [features]
 source_lunchflow = ["dep:finance_as_code_budget_source_lunchflow"]
 source_mbank = ["dep:finance_as_code_budget_source_mbank"]
-sink_treeline = ["dep:finance_as_code_budget_sink_treeline"]
+sink_treeline = ["__sink_treeline__nonbundled_duckdb", "finance_as_code_budget_sink_treeline/duckdb-bundled"]
+__sink_treeline__nonbundled_duckdb = ["dep:finance_as_code_budget_sink_treeline"]
 
-all = ["source_lunchflow", "source_mbank", "sink_treeline"]
+__all_nonbundled_duckdb = ["__sink_treeline__nonbundled_duckdb", "source_lunchflow", "source_mbank"]
+all = ["__all_nonbundled_duckdb", "sink_treeline"]
 
 [dependencies]
 finance_as_code_budget_core.workspace = true

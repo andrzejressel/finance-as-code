@@ -18,17 +18,17 @@ release:
 
 check:
     cargo fmt -- --check
-    cargo clippy --tests --all-features
+    cargo clippy --tests
 
 fmt:
     cargo fmt
-    cargo clippy --tests --all-features --fix --allow-dirty --allow-staged
+    cargo clippy --tests --fix --allow-dirty --allow-staged
 
 test:
-    cargo nextest run --all-features
+    cargo nextest run
 
 test-coverage:
-    cargo llvm-cov nextest --cobertura --output-path covertura.xml --all-features
+    cargo llvm-cov nextest --cobertura --output-path covertura.xml
 
 update-test-snapshots:
     cargo insta test --workspace --accept --test-runner nextest
