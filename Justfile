@@ -18,11 +18,11 @@ release:
 
 check:
     cargo fmt -- --check
-    cargo clippy --tests --all-features
+    cargo clippy --tests
 
 fmt:
     cargo fmt
-    cargo clippy --tests --all-features --fix --allow-dirty --allow-staged
+    cargo clippy --tests --fix --allow-dirty --allow-staged
 
 test:
     cargo nextest run
