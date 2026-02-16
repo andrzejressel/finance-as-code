@@ -38,11 +38,11 @@ chrono = { version = "0.4.43", features = ["serde"] }
 chrono-tz = "0.10.4"
 nonempty-collections = { version = "1.3.0", features = ["serde"] }
 rust_decimal = { version = "1.40.0", features = ["macros", "serde"] }
-treeline-core = { git = "https://github.com/andrzejressel/treeline", rev = "9b6685bf00d3041140f253a99b49dc4b2671d8d0" }
+treeline-core = { git = "https://github.com/andrzejressel/treeline", rev = "565ef800f07c38b5ee9696b25bf897a95f7d104c" }
 assertor = "0.0.4"
 arbitrary = "1.4.2"
 uuid = { version = "1.19.0", features = ["serde", "v4", "v5", "v7", "v8"] }
-duckdb = { version = "1.4.3", features = ["bundled", "json", "chrono"] }
+duckdb = { version = "1.4.3" }
 natord = "1.0.9"
 tokio = {version = "1.49.0", features = ["full"]}
 tokio-stream = {version = "0.1.18", features = ["full"]}
