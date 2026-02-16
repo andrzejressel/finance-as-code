@@ -17,6 +17,7 @@ build:
 #      - git fetch --unshallow
 
     post_build:
+      - mkdir -p $READTHEDOCS_OUTPUT
 #      - curl -fsSL https://get.pulumi.com | sh
 #      - /home/docs/.pulumi/bin/pulumi version
 
