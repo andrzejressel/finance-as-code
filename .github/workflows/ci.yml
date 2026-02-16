@@ -43,6 +43,8 @@ jobs:
         with:
           cache-directories: |
             target/duckdb-download
+      - run: ls -al target/
+      - run: ls -al target/duckdb-download
       - name: Test
         run: just test
 #      - name: Test
