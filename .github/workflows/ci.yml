@@ -42,7 +42,7 @@ jobs:
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-directories: |
-            target/duckdb-download
+            ./target/duckdb-download
 #      - run: ls -al target/
 #      - run: ls -al target/duckdb-download
       - name: Test
