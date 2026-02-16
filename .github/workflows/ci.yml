@@ -50,8 +50,8 @@ jobs:
           import glob 
           import shutil 
           for path in glob.glob("target/debug/build/libduckdb*"):
-            if os.path.isdir(path):
-              shutil.rmtree(path)
+            print(f"Removing {path}\n")
+            shutil.rmtree(path)
       - name: Test
         run: just test
 #      - name: Test
