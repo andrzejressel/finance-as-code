@@ -7,6 +7,7 @@ pub use finance_as_code_budget_core::readers::LocalDirectorySource;
 pub use finance_as_code_budget_core::readers::Source;
 pub use finance_as_code_budget_core::sink::Sink;
 #[cfg(feature = "source_mbank")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "source_mbank", feature = "all"))))]
 pub use finance_as_code_budget_source_mbank::create_mbank_file_reader;
 use log::info;
 use rootcause::prelude::ResultExt;
