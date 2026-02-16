@@ -13,14 +13,18 @@ build:
   apt_packages:
     - just
   commands:
-    - "true"
-  jobs:
-    post_checkout:
-      - git fetch --unshallow
-
-    post_build:
-      - curl -fsSL https://get.pulumi.com | sh
-      - /home/docs/.pulumi/bin/pulumi version
-
-      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
-      - mv target/doc/ $READTHEDOCS_OUTPUT/
+    - git fetch --unshallow
+    - curl -fsSL https://get.pulumi.com | sh
+    - /home/docs/.pulumi/bin/pulumi version
+    - PATH="$PATH:/home/docs/.pulumi/bin" just docs
+    - mv target/doc/ $READTHEDOCS_OUTPUT/
+#  jobs:
+#    post_checkout:
+#      - git fetch --unshallow
+#
+#    post_build:
+#      - curl -fsSL https://get.pulumi.com | sh
+#      - /home/docs/.pulumi/bin/pulumi version
+#
+#      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
+#      - mv target/doc/ $READTHEDOCS_OUTPUT/
