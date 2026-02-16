@@ -17,12 +17,14 @@ build:
 #      - git fetch --unshallow
 
     post_build:
-      - curl -fsSL https://get.pulumi.com | sh
-      - /home/docs/.pulumi/bin/pulumi version
+#      - curl -fsSL https://get.pulumi.com | sh
+#      - /home/docs/.pulumi/bin/pulumi version
 
-      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
-      - mv target/doc/ $READTHEDOCS_OUTPUT/
+#      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
+#      - mv target/doc/ $READTHEDOCS_OUTPUT/
       - echo "<meta http-equiv=\"refresh\" content=\"0;url=finance_as_code_budget\" />" > $READTHEDOCS_OUTPUT/index.html
+      - ls -al $READTHEDOCS_OUTPUT
+      - cat $READTHEDOCS_OUTPUT/index.html
     build: 
       html:
         - "true"
