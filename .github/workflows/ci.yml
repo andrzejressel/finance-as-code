@@ -40,6 +40,9 @@ jobs:
       - name: Install requirements
         run: just install-requirements
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-directories: |
+            target/duckdb-download
       - name: Test
         run: just test
 #      - name: Test
