@@ -12,18 +12,16 @@ build:
     rust: "latest"
   apt_packages:
     - just
-  commands:
-    - curl -fsSL https://get.pulumi.com | sh
-    - /home/docs/.pulumi/bin/pulumi version
-    - PATH="$PATH:/home/docs/.pulumi/bin" just docs
-    - mv target/doc/ $READTHEDOCS_OUTPUT/
-#  jobs:
-#    post_checkout:
-#      - git fetch --unshallow
-#
-#    post_build:
-#      - curl -fsSL https://get.pulumi.com | sh
-#      - /home/docs/.pulumi/bin/pulumi version
-#
-#      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
-#      - mv target/doc/ $READTHEDOCS_OUTPUT/
+  jobs:
+    post_checkout:
+      - git fetch --unshallow
+
+    post_build:
+      - curl -fsSL https://get.pulumi.com | sh
+      - /home/docs/.pulumi/bin/pulumi version
+
+      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
+      - mv target/doc/ $READTHEDOCS_OUTPUT/
+    build: 
+      html:
+        - "true"
