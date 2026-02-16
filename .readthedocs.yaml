@@ -22,6 +22,7 @@ build:
 
       - PATH="$PATH:/home/docs/.pulumi/bin" just docs
       - mv target/doc/ $READTHEDOCS_OUTPUT/
+      - echo '<a href="finance_as_code_budget/index.html">Documentation</a><br>' > $READTHEDOCS_OUTPUT/index.html
     build: 
       html:
         - "true"
