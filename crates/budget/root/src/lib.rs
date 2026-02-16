@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 pub use finance_as_code_budget_core::FileReader;
 pub use finance_as_code_budget_core::TransactionHolder;
 use finance_as_code_budget_core::map_bank_transaction_to_transaction;
