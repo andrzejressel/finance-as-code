@@ -23,7 +23,7 @@ build:
 
 #      - PATH="$PATH:/home/docs/.pulumi/bin" just docs
       - just docs
-      - mv target/doc/ $READTHEDOCS_OUTPUT/html/
+      - mv target/doc/* $READTHEDOCS_OUTPUT/html/
       - echo "<meta http-equiv=\"refresh\" content=\"0;url=finance_as_code_budget\" />" > $READTHEDOCS_OUTPUT/html/index.html
       - ls -al $READTHEDOCS_OUTPUT/html
       - cat $READTHEDOCS_OUTPUT/html/index.html
