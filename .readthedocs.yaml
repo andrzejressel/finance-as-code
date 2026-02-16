@@ -12,6 +12,8 @@ build:
     rust: "latest"
   apt_packages:
     - just
+  commands:
+    - "true"
   jobs:
     post_checkout:
       - git fetch --unshallow
