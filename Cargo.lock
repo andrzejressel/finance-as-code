@@ -4380,7 +4380,7 @@ dependencies = [
 [[package]]
 name = "treeline-core"
 version = "0.0.0-dev"
-source = "git+https://github.com/andrzejressel/treeline?rev=9b6685bf00d3041140f253a99b49dc4b2671d8d0#9b6685bf00d3041140f253a99b49dc4b2671d8d0"
+source = "git+https://github.com/andrzejressel/treeline?rev=565ef800f07c38b5ee9696b25bf897a95f7d104c#565ef800f07c38b5ee9696b25bf897a95f7d104c"
 dependencies = [
  "anyhow",
  "argon2",
