@@ -52,8 +52,6 @@ jobs:
           for path in glob.glob("target/debug/build/libduckdb*"):
             if os.path.isdir(path):
               shutil.rmtree(path)
-#      - run: ls -al target/
-#      - run: ls -al target/duckdb-download
       - name: Test
         run: just test
 #      - name: Test
@@ -73,5 +71,3 @@ jobs:
       - run: git diff --cached
       - name: Ensure no files have changed
         run: git add . && git diff --quiet && git diff --cached --quiet
-      - run: ls -al target/
-      - run: ls -al target/duckdb-download
