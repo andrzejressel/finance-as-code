@@ -34,5 +34,4 @@ update-test-snapshots:
     cargo insta test --workspace --accept --test-runner nextest
 
 docs $RUSTDOCFLAGS="--cfg docsrs":
-    cargo +nightly doc --no-deps --all-features -p finance_as_code_budget
-    
+    cargo +nightly doc --no-deps --features __all_nonbundled_duckdb -p finance_as_code_budget
