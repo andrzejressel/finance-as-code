@@ -13,8 +13,8 @@ build:
   apt_packages:
     - just
   jobs:
-    post_checkout:
-      - git fetch --unshallow
+#    post_checkout:
+#      - git fetch --unshallow
 
     post_build:
       - curl -fsSL https://get.pulumi.com | sh
