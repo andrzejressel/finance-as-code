@@ -43,6 +43,15 @@ jobs:
         with:
           cache-directories: |
             ./target/duckdb-download
+      - name: Workaround for duckdb
+        shell: python
+        run: |
+          import os
+          import glob 
+          import shutil 
+          for path in glob.glob("target/debug/build/libduckdb*"):
+            if os.path.isdir(path):
+              shutil.rmtree(path)
 #      - run: ls -al target/
 #      - run: ls -al target/duckdb-download
       - name: Test
