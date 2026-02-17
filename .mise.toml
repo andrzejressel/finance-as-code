@@ -1,0 +1,5 @@
+[tools]
+"cargo:cargo-nextest" = "0.9.72"
+"cargo:sd" = "1.0.0"
+"cargo:cargo-llvm-cov" = "0.8.0"
+pulumi = "latest"
