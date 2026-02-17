@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  MISE_CARGO_BINSTALL_ONLY: "true"
 
 concurrency: 
   group: ${{ github.workflow }}-${{ github.ref }}
