@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  MISE_CARGO_BINSTALL_ONLY: "1"
 
 concurrency: 
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,19 +31,7 @@ jobs:
       - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cargo-bins/cargo-binstall@ec80feb9e330418e014932e5982599255eff6dbb # v1.17.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: brew install pulumi
-        if: runner.os == 'macOS'
-      - run: pulumi version
-      - run: pulumi login --local
-      - name: Install requirements
-        run: just install-requirements
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-        with:
-          cache-directories: |
-            ./target/duckdb-download
       - name: Workaround for duckdb
         shell: python
         run: |
@@ -52,6 +41,9 @@ jobs:
           for path in glob.glob("target/debug/build/libduckdb*"):
             print(f"Removing {path}\n")
             shutil.rmtree(path)
+      - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8
+      - name: Install requirements
+        run: just install-requirements
       - name: Test
         run: just test
 #      - name: Test
