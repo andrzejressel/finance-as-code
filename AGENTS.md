@@ -51,10 +51,8 @@ finance-as-code/
 │   │       └── mbank/       # Source: parses mBank CSV exports (Windows-1250 encoding)
 │   └── utils/
 │       └── chrono/          # Utility macros: date!() and datetime!() literals
-├── setup/
-│   └── github/              # Pulumi IaC: manages GitHub repo settings (branch protection, labels)
-└── src/
-    └── main.rs              # Workspace root binary (placeholder)
+└── setup/
+    └── github/              # Pulumi IaC: manages GitHub repo settings (branch protection, labels)
 ```
 
 ### Architecture
