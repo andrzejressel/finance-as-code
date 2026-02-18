@@ -1,6 +1,6 @@
 set windows-shell := ["pwsh.exe", "-c"]
 
-install-requirements:
+install:
     rustup component add rustfmt
     rustup component add llvm-tools-preview
     mise install
