@@ -60,6 +60,8 @@ finance-as-code/
 
 Each directory contains own AGENTS.md with crate-specific details. If work is done on a specific crate, check its AGENTS.md for any additional instructions or conventions.
 
+Before searching in Google for any information check the AGENTS.md files for the relevant crate. If you find that some information is missing, please add it to the AGENTS.md file of the relevant crate.
+
 ### Architecture
 
 The project is a personal finance automation pipeline:

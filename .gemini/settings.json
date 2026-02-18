@@ -3,6 +3,8 @@
     "enableAutoUpdate": false
   },
   "context": {
-    "fileName": ["AGENTS.md"]
+    "fileName": [
+      "AGENTS.md"
+    ]
   }
 }
