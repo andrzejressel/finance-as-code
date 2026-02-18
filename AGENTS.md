@@ -55,6 +55,8 @@ finance-as-code/
     └── github/              # Pulumi IaC: manages GitHub repo settings (branch protection, labels)
 ```
 
+Each directory contains own AGENTS.md with crate-specific details. If work is done on a specific crate, check its AGENTS.md for any additional instructions or conventions.
+
 ### Architecture
 
 The project is a personal finance automation pipeline:

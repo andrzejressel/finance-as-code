@@ -24,6 +24,9 @@ pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
 #[cfg(feature = "__sink_treeline__nonbundled_duckdb")]
 pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
 
+#[cfg(feature = "sink_lunchmoney")]
+pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
+
 pub fn run(
     sources: Vec<Box<dyn Source>>,
     // transformers: Vec<Box<dyn Transformer>>,

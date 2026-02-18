@@ -1270,6 +1270,7 @@ version = "0.1.0"
 dependencies = [
  "colog",
  "finance_as_code_budget_core",
+ "finance_as_code_budget_sink_lunchmoney",
  "finance_as_code_budget_sink_treeline",
  "finance_as_code_budget_source_lunchflow",
  "finance_as_code_budget_source_mbank",
@@ -1300,6 +1301,20 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-stream",
+ "uuid",
+]
+
+[[package]]
+name = "finance_as_code_budget_sink_lunchmoney"
+version = "0.0.0-DEV"
+dependencies = [
+ "anyhow",
+ "bon",
+ "finance_as_code_api_lunchmoney",
+ "finance_as_code_budget_core",
+ "log",
+ "rootcause",
+ "serde_json",
  "uuid",
 ]
 
