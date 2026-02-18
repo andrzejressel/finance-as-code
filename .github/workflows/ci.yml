@@ -28,9 +28,6 @@ jobs:
       - run: git config --system core.longpaths true
         if: runner.os == 'Windows'
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
       - name: Workaround for duckdb
         shell: python
@@ -42,8 +39,8 @@ jobs:
             print(f"Removing {path}\n")
             shutil.rmtree(path)
       - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-      - name: Install requirements
-        run: just install-requirements
+      - name: Install
+        run: just install
       - name: Test
         run: just test
 #      - name: Test
