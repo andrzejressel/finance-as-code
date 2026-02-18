@@ -41,10 +41,13 @@ This is a Cargo workspace. All Rust crates live under `crates/` and infrastructu
 ```
 finance-as-code/
 ├── crates/
+│   ├── api/
+│   │   └── lunchmoney/      # Low-level client for the Lunch Money v2 API
 │   ├── budget/
 │   │   ├── core/            # Domain types, traits, and pipeline logic
 │   │   ├── root/            # Public facade; feature-gated orchestration (run())
 │   │   ├── sink/
+│   │   │   ├── lunchmoney/   # Sink: writes transactions to Lunch Money via its API
 │   │   │   └── treeline/    # Sink: writes transactions to Treeline's DuckDB database
 │   │   └── source/
 │   │       ├── lunchflow/   # Source: downloads and parses Lunchflow API transactions
@@ -63,8 +66,8 @@ The project is a personal finance automation pipeline:
 
 ```
 [Source: mBank CSV]      ──┐
-[Source: Lunchflow API]  ──┼──> TransactionHolder ──> map_bank_tx_to_tx ──> [Sink: Treeline DuckDB]
-[Source: LocalDirectory] ──┘
+[Source: Lunchflow API]  ──┼──> TransactionHolder ──> map_bank_tx_to_tx ──┬──> [Sink: Treeline DuckDB]
+[Source: LocalDirectory] ──┘                                              └──> [Sink: Lunch Money API]
 ```
 
 All sources implement the `Source` trait, all file parsers implement `FileReader`, and all destinations implement `Sink`. The `budget/root` crate is the feature-gated public API that composes them.

@@ -1,0 +1,8 @@
+{
+  "general": {
+    "enableAutoUpdate": false
+  },
+  "context": {
+    "fileName": ["AGENTS.md"]
+  }
+}
