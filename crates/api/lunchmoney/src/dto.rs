@@ -1,0 +1,60 @@
+use serde::{Deserialize, Serialize};
+
+/// Minimal transaction as returned by `GET /transactions`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TransactionDto {
+    pub id: i64,
+    pub date: String,
+    pub amount: String,
+    pub currency: String,
+    pub payee: String,
+    pub notes: Option<String>,
+}
+
+/// Optional query parameters for `GET /transactions`.
+///
+/// All fields default to `None`; unset fields are omitted from the request.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct GetTransactionsParams {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
+    /// Maximum number of transactions to return (1–2000, default 1000).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+    /// Offset into the result set; used for pagination together with `has_more`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u32>,
+}
+
+/// A single transaction update entry for `PUT /transactions`.
+///
+/// Only `Some` fields are serialised and sent to the API; `None` fields are omitted.
+/// `id` must identify an existing transaction.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UpdateTransactionDto {
+    pub id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payee: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+/// Request body for `PUT /transactions` (bulk update, 1–500 transactions).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PutTransactionsRequest {
+    pub transactions: Vec<UpdateTransactionDto>,
+}
+
+/// Response envelope for `PUT /transactions` (bulk update).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PutTransactionsResponse {
+    pub transactions: Vec<TransactionDto>,
+}
