@@ -9,7 +9,8 @@ use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
 
-const MAX_TRANSACTIONS_PER_REQUEST: usize = 500;
+const MAX_TRANSACTIONS_PER_DELETE_REQUEST: usize = 500;
+const MAX_TRANSACTIONS_PER_INSERT_REQUEST: usize = 50;
 
 #[derive(Clone, Debug)]
 pub struct LunchMoneyApiKey(String);
@@ -108,11 +109,12 @@ impl Sink for LunchMoneySink {
             );
 
             let total_transactions_to_delete = all_transactions.len();
-            let total_delete_chunks = total_transactions_to_delete.div_ceil(MAX_TRANSACTIONS_PER_REQUEST);
+            let total_delete_chunks =
+                total_transactions_to_delete.div_ceil(MAX_TRANSACTIONS_PER_DELETE_REQUEST);
             let mut deleted_transactions = 0;
 
             for (chunk_index, chunk) in all_transactions
-                .chunks(MAX_TRANSACTIONS_PER_REQUEST)
+                .chunks(MAX_TRANSACTIONS_PER_DELETE_REQUEST)
                 .enumerate()
             {
                 let ids: Vec<_> = chunk.iter().map(|transaction| transaction.id).collect();
@@ -165,11 +167,12 @@ impl Sink for LunchMoneySink {
 
         let transactions = transactions.to_vec();
         let total_transactions_to_insert = transactions.len();
-        let total_insert_chunks = total_transactions_to_insert.div_ceil(MAX_TRANSACTIONS_PER_REQUEST);
+        let total_insert_chunks =
+            total_transactions_to_insert.div_ceil(MAX_TRANSACTIONS_PER_INSERT_REQUEST);
         let mut inserted_transactions = 0;
 
         for (chunk_index, chunk) in transactions
-            .chunks(MAX_TRANSACTIONS_PER_REQUEST)
+            .chunks(MAX_TRANSACTIONS_PER_INSERT_REQUEST)
             .enumerate()
         {
             let chunk_size = chunk.len();
@@ -191,7 +194,7 @@ impl Sink for LunchMoneySink {
                     chunk_size,
                     self.config.account_name.value()
                 );
-                
+
                 warn!("Error inserting chunk: {:?}", r.err());
 
                 for transaction in chunk {
