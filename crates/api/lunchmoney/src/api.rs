@@ -82,6 +82,7 @@ impl LunchMoneyApi for LunchMoneyClient {
             let page_params = GetTransactionsParams {
                 start_date: params.start_date.clone(),
                 end_date: params.end_date.clone(),
+                manual_account_id: params.manual_account_id,
                 limit: Some(limit),
                 offset: Some(offset),
             };
@@ -182,6 +183,7 @@ mod tests {
             when.method(httpmock::Method::GET)
                 .path("/transactions")
                 .header("Authorization", "Bearer test_key")
+                .query_param("manual_account_id", "42")
                 .query_param("limit", "2")
                 .query_param("offset", "0");
             then.status(200)
@@ -201,6 +203,7 @@ mod tests {
             when.method(httpmock::Method::GET)
                 .path("/transactions")
                 .header("Authorization", "Bearer test_key")
+                .query_param("manual_account_id", "42")
                 .query_param("limit", "2")
                 .query_param("offset", "2");
             then.status(200)
@@ -217,6 +220,7 @@ mod tests {
         let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
         let transactions = client
             .get_all_transactions(&GetTransactionsParams {
+                manual_account_id: Some(42),
                 limit: Some(2),
                 ..Default::default()
             })

@@ -17,3 +17,5 @@ impl Sink for LunchMoneySink {
         todo!("Implement Lunch Money sink")
     }
 }
+
+impl LunchMoneySink {}

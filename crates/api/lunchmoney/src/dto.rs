@@ -20,6 +20,9 @@ pub struct GetTransactionsParams {
     pub start_date: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end_date: Option<String>,
+    /// Filter transactions by manual account id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manual_account_id: Option<i64>,
     /// Maximum number of transactions to return (1–2000, default 1000).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
