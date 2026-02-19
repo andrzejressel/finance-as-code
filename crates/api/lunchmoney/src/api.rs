@@ -1,6 +1,6 @@
 use crate::ApiKey;
 use crate::dto::{
-    DeleteTransactionsRequest, GetTransactionsParams, PutTransactionsRequest,
+    DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PutTransactionsRequest,
     PutTransactionsResponse, TransactionDto,
 };
 use rootcause::prelude::ResultExt;
@@ -13,11 +13,20 @@ struct PageResponse {
     has_more: bool,
 }
 
+/// Response envelope for `GET /manual_accounts`.
+#[derive(serde::Deserialize)]
+struct ManualAccountsResponse {
+    manual_accounts: Vec<ManualAccountDto>,
+}
+
 /// Abstraction over the Lunch Money v2 `/transactions` endpoints.
 ///
 /// A `MockLunchMoneyApi` is generated automatically in test builds via `mockall`.
 #[cfg_attr(test, mockall::automock)]
 pub trait LunchMoneyApi {
+    /// Fetch all manual accounts (`GET /manual_accounts`).
+    fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>>;
+
     /// Fetch every matching transaction, following `has_more` / `offset` pagination
     /// automatically until the full result set has been retrieved.
     fn get_all_transactions(&self, params: &GetTransactionsParams) -> Result<Vec<TransactionDto>>;
@@ -73,6 +82,31 @@ impl LunchMoneyClient {
 }
 
 impl LunchMoneyApi for LunchMoneyClient {
+    fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>> {
+        let response = self
+            .client
+            .get(format!("{}/manual_accounts", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.api_key.value()))
+            .send()
+            .context("Failed to send GET /manual_accounts request")?;
+
+        if response.status().is_success() {
+            Ok(response
+                .json::<ManualAccountsResponse>()
+                .context("Failed to deserialize GET /manual_accounts response")?
+                .manual_accounts)
+        } else {
+            let status = response.status();
+            let body = response.text().context_with(|| {
+                format!(
+                    "Failed to read error body from GET /manual_accounts (status {})",
+                    status
+                )
+            })?;
+            bail!("GET /manual_accounts returned error: {} - {}", status, body);
+        }
+    }
+
     fn get_all_transactions(&self, params: &GetTransactionsParams) -> Result<Vec<TransactionDto>> {
         let mut all_transactions = Vec::new();
         let limit = params.limit.unwrap_or(1000);
@@ -157,7 +191,7 @@ mod tests {
     use super::*;
     use crate::ApiKey;
     use crate::dto::{
-        DeleteTransactionsRequest, GetTransactionsParams, PutTransactionsRequest,
+        DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PutTransactionsRequest,
         PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
     use googletest::prelude::*;
@@ -173,6 +207,46 @@ mod tests {
             payee: payee.to_string(),
             notes: notes.map(str::to_string),
         }
+    }
+
+    #[test]
+    fn get_all_manual_accounts_sends_request_and_parses_response() -> googletest::Result<()> {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/manual_accounts")
+                .header("Authorization", "Bearer test_key");
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "manual_accounts": [
+                        { "id": 1, "name": "Cash Wallet", "display_name": "Cash" },
+                        { "id": 2, "name": null, "display_name": null }
+                    ]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let accounts = client.get_all_manual_accounts().unwrap();
+
+        verify_that!(
+            accounts,
+            eq(&vec![
+                ManualAccountDto {
+                    id: 1,
+                    name: Some("Cash Wallet".to_string()),
+                    display_name: Some("Cash".to_string()),
+                },
+                ManualAccountDto {
+                    id: 2,
+                    name: None,
+                    display_name: None,
+                },
+            ])
+        )?;
+
+        mock.assert();
+        Ok(())
     }
 
     #[test]

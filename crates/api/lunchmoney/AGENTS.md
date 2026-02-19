@@ -14,6 +14,8 @@ API Documentation: https://alpha.lunchmoney.dev/v2/docs
 
 **LunchMoneyClient**: The production implementation using `reqwest::blocking`.
 
+**Manual Accounts**: `GET /manual_accounts` is available via `get_all_manual_accounts`.
+
 ## Non-obvious behaviour
 
 **Automatic Pagination**: `get_all_transactions` automatically follows `has_more` and `offset` flags to fetch the entire result set in a single call.

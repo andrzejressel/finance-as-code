@@ -11,6 +11,16 @@ pub struct TransactionDto {
     pub notes: Option<String>,
 }
 
+/// Manual account as returned by `GET /manual_accounts`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ManualAccountDto {
+    pub id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+}
+
 /// Optional query parameters for `GET /transactions`.
 ///
 /// All fields default to `None`; unset fields are omitted from the request.
