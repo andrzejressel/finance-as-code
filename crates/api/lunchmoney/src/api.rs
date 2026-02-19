@@ -235,12 +235,10 @@ mod tests {
                 ManualAccountDto {
                     id: 1,
                     name: "Cash Wallet".to_string(),
-                    display_name: "Cash".to_string(),
                 },
                 ManualAccountDto {
                     id: 2,
                     name: "Savings Jar".to_string(),
-                    display_name: "Credit".to_string(),
                 },
             ])
         )?;

@@ -14,3 +14,9 @@ impl ApiKey {
         &self.0
     }
 }
+
+impl Into<ApiKey> for &str {
+    fn into(self) -> ApiKey {
+        ApiKey::new(self.to_string())
+    }
+}

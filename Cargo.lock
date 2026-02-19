@@ -1312,6 +1312,7 @@ dependencies = [
  "bon",
  "finance_as_code_api_lunchmoney",
  "finance_as_code_budget_core",
+ "googletest",
  "log",
  "rootcause",
  "serde_json",

@@ -16,7 +16,6 @@ pub struct TransactionDto {
 pub struct ManualAccountDto {
     pub id: i64,
     pub name: String,
-    pub display_name: String,
 }
 
 /// Optional query parameters for `GET /transactions`.

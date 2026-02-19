@@ -25,7 +25,12 @@ pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
 pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
 
 #[cfg(feature = "sink_lunchmoney")]
-pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
+pub mod lunchmoney {
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
+    pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
+}
 
 pub fn run(
     sources: Vec<Box<dyn Source>>,
