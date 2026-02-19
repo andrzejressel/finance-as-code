@@ -2,12 +2,12 @@ use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
 use finance_as_code_api_lunchmoney::dto::{
     DeleteTransactionsRequest, InsertTransactionDto, PostTransactionsRequest,
 };
-use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::sink::Sink;
+use finance_as_code_budget_core::Transaction;
 use log::{info, warn};
-use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
+use rootcause::Result;
 
 const MAX_TRANSACTIONS_PER_DELETE_REQUEST: usize = 500;
 const MAX_TRANSACTIONS_PER_INSERT_REQUEST: usize = 50;
@@ -268,63 +268,28 @@ impl LunchMoneySink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use finance_as_code_api_lunchmoney::dto::{
-        DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto,
-        PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
-        PutTransactionsResponse, TransactionDto,
-    };
+    use finance_as_code_api_lunchmoney::api::MockLunchMoneyApi;
+    use finance_as_code_api_lunchmoney::dto::ManualAccountDto;
     use googletest::prelude::*;
-    use rootcause::Result as RootResult;
-
-    struct FakeLunchMoneyApi {
-        manual_accounts: Vec<ManualAccountDto>,
-    }
-
-    impl LunchMoneyApi for FakeLunchMoneyApi {
-        fn get_all_manual_accounts(&self) -> RootResult<Vec<ManualAccountDto>> {
-            Ok(self.manual_accounts.clone())
-        }
-
-        fn get_all_transactions(
-            &self,
-            _params: &GetTransactionsParams,
-        ) -> RootResult<Vec<TransactionDto>> {
-            panic!("get_all_transactions should not be called in this test")
-        }
-
-        fn put_transactions(
-            &self,
-            _request: &PutTransactionsRequest,
-        ) -> RootResult<PutTransactionsResponse> {
-            panic!("put_transactions should not be called in this test")
-        }
-
-        fn post_transactions(
-            &self,
-            _request: &PostTransactionsRequest,
-        ) -> RootResult<PostTransactionsResponse> {
-            panic!("post_transactions should not be called in this test")
-        }
-
-        fn delete_transactions(&self, _request: &DeleteTransactionsRequest) -> RootResult<()> {
-            panic!("delete_transactions should not be called in this test")
-        }
-    }
 
     #[test]
     fn get_account_id_for_account_name_returns_account_id() -> googletest::Result<()> {
-        let api_client = FakeLunchMoneyApi {
-            manual_accounts: vec![
-                ManualAccountDto {
-                    id: 1,
-                    name: "Cash Wallet".to_string(),
-                },
-                ManualAccountDto {
-                    id: 2,
-                    name: "Savings Jar".to_string(),
-                },
-            ],
-        };
+        let mut api_client = MockLunchMoneyApi::new();
+        api_client
+            .expect_get_all_manual_accounts()
+            .times(1)
+            .return_once(|| {
+                Ok(vec![
+                    ManualAccountDto {
+                        id: 1,
+                        name: "Cash Wallet".to_string(),
+                    },
+                    ManualAccountDto {
+                        id: 2,
+                        name: "Savings Jar".to_string(),
+                    },
+                ])
+            });
 
         let account_id = LunchMoneySink::get_account_id_for_account_name(
             &LunchMoneyAccountName::from("Savings Jar"),
@@ -337,14 +302,18 @@ mod tests {
     }
 
     #[test]
-    fn get_account_id_for_account_name_returns_error_when_account_is_missing()
-    -> googletest::Result<()> {
-        let api_client = FakeLunchMoneyApi {
-            manual_accounts: vec![ManualAccountDto {
-                id: 1,
-                name: "Cash Wallet".to_string(),
-            }],
-        };
+    fn get_account_id_for_account_name_returns_error_when_account_is_missing(
+    ) -> googletest::Result<()> {
+        let mut api_client = MockLunchMoneyApi::new();
+        api_client
+            .expect_get_all_manual_accounts()
+            .times(1)
+            .return_once(|| {
+                Ok(vec![ManualAccountDto {
+                    id: 1,
+                    name: "Cash Wallet".to_string(),
+                }])
+            });
 
         let error = LunchMoneySink::get_account_id_for_account_name(
             &LunchMoneyAccountName::from("Savings Jar"),

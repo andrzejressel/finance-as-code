@@ -12,7 +12,7 @@ Direct OpenAPI yaml: https://alpha.lunchmoney.dev/v2/openapi
 
 ## Key Components
 
-**LunchMoneyApi Trait**: The primary interface for interacting with Lunch Money. It is auto-mockable via `mockall` for testing.
+**LunchMoneyApi Trait**: The primary interface for interacting with Lunch Money. It is auto-mockable via `mockall` in this crate's tests and when the crate feature `mock` is enabled (for downstream crate tests).
 
 **LunchMoneyClient**: The production implementation using `reqwest::blocking`.
 

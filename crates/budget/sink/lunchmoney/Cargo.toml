@@ -17,3 +17,4 @@ itertools.workspace = true
 
 [dev-dependencies]
 googletest.workspace = true
+finance_as_code_api_lunchmoney = { workspace = true, features = ["mock"] }

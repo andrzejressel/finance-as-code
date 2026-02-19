@@ -1,13 +1,13 @@
-use crate::ApiKey;
 use crate::dto::{
     DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PostTransactionsRequest,
     PostTransactionsResponse, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
 };
+use crate::ApiKey;
 use log::warn;
-use reqwest::StatusCode;
 use reqwest::header::{HeaderMap, RETRY_AFTER};
+use reqwest::StatusCode;
 use rootcause::prelude::ResultExt;
-use rootcause::{Result, bail};
+use rootcause::{bail, Result};
 use std::time::Duration;
 
 const MAX_RATE_LIMIT_RETRIES: u32 = 3;
@@ -29,7 +29,7 @@ struct ManualAccountsResponse {
 /// Abstraction over the Lunch Money v2 `/transactions` endpoints.
 ///
 /// A `MockLunchMoneyApi` is generated automatically in test builds via `mockall`.
-#[cfg_attr(test, mockall::automock)]
+#[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait LunchMoneyApi {
     /// Fetch all manual accounts (`GET /manual_accounts`).
     fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>>;
@@ -40,7 +40,7 @@ pub trait LunchMoneyApi {
 
     /// Update up to 500 transactions in a single call (`PUT /transactions`).
     fn put_transactions(&self, request: &PutTransactionsRequest)
-    -> Result<PutTransactionsResponse>;
+        -> Result<PutTransactionsResponse>;
 
     /// Insert up to 500 transactions in a single call (`POST /transactions`).
     fn post_transactions(
@@ -324,12 +324,12 @@ impl LunchMoneyApi for LunchMoneyClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ApiKey;
     use crate::dto::{
         DeleteTransactionsRequest, GetTransactionsParams, InsertTransactionDto, ManualAccountDto,
         PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
         PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
+    use crate::ApiKey;
     use googletest::prelude::*;
     use httpmock::MockServer;
     use reqwest::header::{HeaderMap, HeaderValue};
