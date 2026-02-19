@@ -29,3 +29,5 @@ Direct OpenAPI yaml: https://alpha.lunchmoney.dev/v2/openapi
 **Delete Semantics**: bulk delete (`DELETE /transactions` with `{ ids }`) is treated as success on HTTP `204 No Content`.
 
 **Error Handling**: Uses `rootcause` for context-aware error reporting, capturing HTTP status code, response headers, and response body on failure.
+
+**Rate Limiting**: API enforces `100 requests/minute` per IP. On HTTP `429 Too Many Requests`, respect the `Retry-After` header (seconds) before retrying.

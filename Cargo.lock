@@ -1257,6 +1257,7 @@ version = "0.0.0-DEV"
 dependencies = [
  "googletest",
  "httpmock",
+ "log",
  "mockall",
  "reqwest 0.13.2",
  "rootcause",

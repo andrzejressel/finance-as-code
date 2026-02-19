@@ -1,11 +1,10 @@
-use itertools::Itertools;
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
 use finance_as_code_api_lunchmoney::dto::{
     DeleteTransactionsRequest, InsertTransactionDto, PostTransactionsRequest,
 };
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::sink::Sink;
-use log::info;
+use log::{info, warn};
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
@@ -107,16 +106,34 @@ impl Sink for LunchMoneySink {
                 all_transactions.len(),
                 self.config.account_name.value()
             );
-            
-            for chunk in &all_transactions.iter().chunks(MAX_TRANSACTIONS_PER_REQUEST) {
-                let ids = chunk.map(|t| &t.id).cloned().collect_vec();
+
+            let total_transactions_to_delete = all_transactions.len();
+            let total_delete_chunks = total_transactions_to_delete.div_ceil(MAX_TRANSACTIONS_PER_REQUEST);
+            let mut deleted_transactions = 0;
+
+            for (chunk_index, chunk) in all_transactions
+                .chunks(MAX_TRANSACTIONS_PER_REQUEST)
+                .enumerate()
+            {
+                let ids: Vec<_> = chunk.iter().map(|transaction| transaction.id).collect();
+                let chunk_size = ids.len();
+
                 client
-                    .delete_transactions(&DeleteTransactionsRequest {
-                        ids
-                    })
+                    .delete_transactions(&DeleteTransactionsRequest { ids })
                     .context("failed to delete existing transactions")?;
+
+                deleted_transactions += chunk_size;
+                info!(
+                    "Deleted chunk {}/{} ({} transactions); processed {}/{} existing transactions for account '{}'",
+                    chunk_index + 1,
+                    total_delete_chunks,
+                    chunk_size,
+                    deleted_transactions,
+                    total_transactions_to_delete,
+                    self.config.account_name.value()
+                );
             }
-            // 
+            //
             // client
             //     .delete_transactions(&DeleteTransactionsRequest {
             //         ids: all_transactions
@@ -145,10 +162,17 @@ impl Sink for LunchMoneySink {
             transactions.len(),
             self.config.account_name.value()
         );
-        
-        let mut transactions = transactions.to_vec();
 
-        for chunk in transactions.chunks(MAX_TRANSACTIONS_PER_REQUEST) {
+        let transactions = transactions.to_vec();
+        let total_transactions_to_insert = transactions.len();
+        let total_insert_chunks = total_transactions_to_insert.div_ceil(MAX_TRANSACTIONS_PER_REQUEST);
+        let mut inserted_transactions = 0;
+
+        for (chunk_index, chunk) in transactions
+            .chunks(MAX_TRANSACTIONS_PER_REQUEST)
+            .enumerate()
+        {
+            let chunk_size = chunk.len();
             let transactions = chunk
                 .iter()
                 .map(|transaction| Self::to_insert_transaction(transaction, account_id))
@@ -158,19 +182,50 @@ impl Sink for LunchMoneySink {
                 .post_transactions(&PostTransactionsRequest { transactions })
                 .context("failed to post transactions to Lunch Money")
                 .context_with(|| format!("Failed chunk: {:?}", chunk));
-            
+
             if r.is_err() {
+                info!(
+                    "Insert chunk {}/{} failed ({} transactions); retrying one by one for account '{}'",
+                    chunk_index + 1,
+                    total_insert_chunks,
+                    chunk_size,
+                    self.config.account_name.value()
+                );
+                
+                warn!("Error inserting chunk: {:?}", r.err());
+
                 for transaction in chunk {
-                    
                     client
                         .post_transactions(&PostTransactionsRequest {
-                            transactions: vec![Self::to_insert_transaction(transaction, account_id)],
+                            transactions: vec![Self::to_insert_transaction(
+                                transaction,
+                                account_id,
+                            )],
                         })
                         .context("failed to post transaction to Lunch Money")
                         .context_with(|| format!("Failed transaction: {:?}", transaction))?;
-                    
+
+                    inserted_transactions += 1;
+                    info!(
+                        "Inserted retried transaction; processed {}/{} transactions for account '{}'",
+                        inserted_transactions,
+                        total_transactions_to_insert,
+                        self.config.account_name.value()
+                    );
+
                     // info!("Failed transaction: {:?}", transaction);
                 }
+            } else {
+                inserted_transactions += chunk_size;
+                info!(
+                    "Inserted chunk {}/{} ({} transactions); processed {}/{} transactions for account '{}'",
+                    chunk_index + 1,
+                    total_insert_chunks,
+                    chunk_size,
+                    inserted_transactions,
+                    total_transactions_to_insert,
+                    self.config.account_name.value()
+                );
             }
         }
 

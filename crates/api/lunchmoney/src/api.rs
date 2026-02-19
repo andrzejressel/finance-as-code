@@ -3,9 +3,15 @@ use crate::dto::{
     DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PostTransactionsRequest,
     PostTransactionsResponse, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
 };
-use reqwest::header::HeaderMap;
+use log::warn;
+use reqwest::StatusCode;
+use reqwest::header::{HeaderMap, RETRY_AFTER};
 use rootcause::prelude::ResultExt;
 use rootcause::{Result, bail};
+use std::time::Duration;
+
+const MAX_RATE_LIMIT_RETRIES: u32 = 3;
+const DEFAULT_RETRY_AFTER_SECS: u64 = 60;
 
 /// Single-page response used internally by the pagination loop.
 #[derive(serde::Deserialize)]
@@ -62,14 +68,54 @@ impl LunchMoneyClient {
         }
     }
 
+    fn send_with_rate_limit_retry<F>(
+        &self,
+        mut build_request: F,
+        operation: &str,
+    ) -> Result<reqwest::blocking::Response>
+    where
+        F: FnMut() -> reqwest::blocking::RequestBuilder,
+    {
+        for attempt in 0..=MAX_RATE_LIMIT_RETRIES {
+            let response = build_request()
+                .send()
+                .context_with(|| format!("Failed to send {operation} request"))?;
+
+            if response.status() != StatusCode::TOO_MANY_REQUESTS {
+                return Ok(response);
+            }
+
+            let retry_after_seconds = parse_retry_after_seconds(response.headers());
+            let attempt_number = attempt + 1;
+            let total_attempts = MAX_RATE_LIMIT_RETRIES + 1;
+
+            if attempt == MAX_RATE_LIMIT_RETRIES {
+                warn!(
+                    "{operation} hit rate limit (attempt {attempt_number}/{total_attempts}); no retries left"
+                );
+                return Ok(response);
+            }
+
+            warn!(
+                "{operation} hit rate limit (attempt {attempt_number}/{total_attempts}); retrying in {retry_after_seconds}s"
+            );
+
+            std::thread::sleep(Duration::from_secs(retry_after_seconds));
+        }
+
+        unreachable!("retry loop must always return")
+    }
+
     fn fetch_page(&self, params: &GetTransactionsParams) -> Result<PageResponse> {
-        let response = self
-            .client
-            .get(format!("{}/transactions", self.base_url))
-            .header("Authorization", format!("Bearer {}", self.api_key.value()))
-            .query(params)
-            .send()
-            .context("Failed to send GET /transactions request")?;
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .get(format!("{}/transactions", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .query(params)
+            },
+            "GET /transactions",
+        )?;
 
         if response.status().is_success() {
             Ok(response
@@ -94,6 +140,14 @@ impl LunchMoneyClient {
     }
 }
 
+fn parse_retry_after_seconds(headers: &HeaderMap) -> u64 {
+    headers
+        .get(RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(DEFAULT_RETRY_AFTER_SECS)
+}
+
 fn format_headers(headers: &HeaderMap) -> String {
     headers
         .iter()
@@ -104,12 +158,14 @@ fn format_headers(headers: &HeaderMap) -> String {
 
 impl LunchMoneyApi for LunchMoneyClient {
     fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>> {
-        let response = self
-            .client
-            .get(format!("{}/manual_accounts", self.base_url))
-            .header("Authorization", format!("Bearer {}", self.api_key.value()))
-            .send()
-            .context("Failed to send GET /manual_accounts request")?;
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .get(format!("{}/manual_accounts", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+            },
+            "GET /manual_accounts",
+        )?;
 
         if response.status().is_success() {
             Ok(response
@@ -165,13 +221,15 @@ impl LunchMoneyApi for LunchMoneyClient {
         &self,
         request: &PutTransactionsRequest,
     ) -> Result<PutTransactionsResponse> {
-        let response = self
-            .client
-            .put(format!("{}/transactions", self.base_url))
-            .header("Authorization", format!("Bearer {}", self.api_key.value()))
-            .json(request)
-            .send()
-            .context("Failed to send PUT /transactions request")?;
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .put(format!("{}/transactions", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .json(request)
+            },
+            "PUT /transactions",
+        )?;
 
         if response.status().is_success() {
             Ok(response
@@ -199,13 +257,15 @@ impl LunchMoneyApi for LunchMoneyClient {
         &self,
         request: &PostTransactionsRequest,
     ) -> Result<PostTransactionsResponse> {
-        let response = self
-            .client
-            .post(format!("{}/transactions", self.base_url))
-            .header("Authorization", format!("Bearer {}", self.api_key.value()))
-            .json(request)
-            .send()
-            .context("Failed to send POST /transactions request")?;
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .post(format!("{}/transactions", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .json(request)
+            },
+            "POST /transactions",
+        )?;
 
         if response.status().is_success() {
             Ok(response
@@ -230,13 +290,15 @@ impl LunchMoneyApi for LunchMoneyClient {
     }
 
     fn delete_transactions(&self, request: &DeleteTransactionsRequest) -> Result<()> {
-        let response = self
-            .client
-            .delete(format!("{}/transactions", self.base_url))
-            .header("Authorization", format!("Bearer {}", self.api_key.value()))
-            .json(request)
-            .send()
-            .context("Failed to send DELETE /transactions request")?;
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .delete(format!("{}/transactions", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .json(request)
+            },
+            "DELETE /transactions",
+        )?;
 
         if response.status().is_success() {
             Ok(())
@@ -270,6 +332,7 @@ mod tests {
     };
     use googletest::prelude::*;
     use httpmock::MockServer;
+    use reqwest::header::{HeaderMap, HeaderValue};
     use serde_json::json;
 
     fn tx(id: i64, date: &str, payee: &str, notes: Option<&str>) -> TransactionDto {
@@ -516,6 +579,56 @@ mod tests {
         )?;
 
         mock.assert();
+        Ok(())
+    }
+
+    #[test]
+    fn parse_retry_after_seconds_parses_header_and_uses_default_fallbacks() -> googletest::Result<()>
+    {
+        let mut headers = HeaderMap::new();
+        headers.insert(RETRY_AFTER, HeaderValue::from_static("17"));
+        verify_that!(parse_retry_after_seconds(&headers), eq(17))?;
+
+        headers.insert(RETRY_AFTER, HeaderValue::from_static("not-a-number"));
+        verify_that!(
+            parse_retry_after_seconds(&headers),
+            eq(DEFAULT_RETRY_AFTER_SECS)
+        )?;
+
+        headers.remove(RETRY_AFTER);
+        verify_that!(
+            parse_retry_after_seconds(&headers),
+            eq(DEFAULT_RETRY_AFTER_SECS)
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn get_all_manual_accounts_retries_rate_limited_requests() -> googletest::Result<()> {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/manual_accounts")
+                .header("Authorization", "Bearer test_key");
+            then.status(429)
+                .header("Content-Type", "application/json")
+                .header("Retry-After", "0")
+                .json_body(json!({
+                    "message": "Too Many Requests",
+                    "errors": [{ "errMsg": "Too many requests, please try again later." }]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let error = client.get_all_manual_accounts().unwrap_err();
+        let error_string = error.to_string();
+
+        verify_that!(
+            error_string.as_str(),
+            contains_substring("GET /manual_accounts returned error: 429 Too Many Requests")
+        )?;
+        verify_that!(error_string.as_str(), contains_substring("retry-after=0"))?;
+        mock.assert_calls((MAX_RATE_LIMIT_RETRIES + 1) as usize);
         Ok(())
     }
 }
