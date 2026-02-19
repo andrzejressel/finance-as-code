@@ -333,13 +333,14 @@ mod tests {
     use googletest::prelude::*;
     use httpmock::MockServer;
     use reqwest::header::{HeaderMap, HeaderValue};
+    use rust_decimal::dec;
     use serde_json::json;
 
     fn tx(id: i64, date: &str, payee: &str, notes: Option<&str>) -> TransactionDto {
         TransactionDto {
             id,
             date: date.to_string(),
-            amount: "100.0000".to_string(),
+            amount: dec!(100.0000),
             currency: "USD".to_string(),
             payee: payee.to_string(),
             notes: notes.map(str::to_string),
@@ -561,7 +562,7 @@ mod tests {
             .post_transactions(&PostTransactionsRequest {
                 transactions: vec![InsertTransactionDto {
                     date: "2024-01-01".to_string(),
-                    amount: "100.0000".to_string(),
+                    amount: dec!(100.0000),
                     currency: Some("USD".to_string()),
                     payee: Some("Payee 1".to_string()),
                     notes: None,

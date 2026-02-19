@@ -1261,6 +1261,7 @@ dependencies = [
  "mockall",
  "reqwest 0.13.2",
  "rootcause",
+ "rust_decimal",
  "serde",
  "serde_json",
 ]

@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 /// Minimal transaction as returned by `GET /transactions`.
@@ -5,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct TransactionDto {
     pub id: i64,
     pub date: String,
-    pub amount: String,
+    pub amount: Decimal,
     pub currency: String,
     pub payee: String,
     pub notes: Option<String>,
@@ -42,7 +43,7 @@ pub struct GetTransactionsParams {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct InsertTransactionDto {
     pub date: String,
-    pub amount: String,
+    pub amount: Decimal,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -77,7 +78,7 @@ pub struct UpdateTransactionDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
