@@ -1,4 +1,4 @@
-use ::duckdb::Connection;
+use duckdb::Connection;
 use finance_as_code_budget_core::Transaction;
 use rootcause::compat::IntoRootcause;
 use rootcause::compat::anyhow1::IntoAnyhow;
@@ -103,6 +103,6 @@ impl DuckDbRepositoryExt for DuckDbRepository {
 
 pub(crate) fn to_treeline_transaction(tx: &Transaction, account_id: Uuid) -> TreelineTransaction {
     let mut t = TreelineTransaction::new(tx.id, account_id, *tx.amount.amount(), tx.date);
-    t.description = Some(tx.description.clone());
+    t.description = Some(tx.get_full_description());
     t
 }

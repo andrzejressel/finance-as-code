@@ -2,6 +2,21 @@ use chrono::{Datelike, Months};
 use std::fmt::Display;
 use uuid::Uuid;
 
+pub fn join_non_empty(parts: &[&str], separator: &str) -> String {
+    parts
+        .iter()
+        .filter_map(|part| {
+            let trimmed = part.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(separator)
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AccountId(Uuid);
 

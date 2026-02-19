@@ -10,6 +10,7 @@ TransactionHolder {
                     BankTransaction {
                         date: 2025-12-01,
                         description: "BLIK ZAKUP E-COMMERCE | Tytul 1",
+                        counterparty: "",
                         amount: Money {
                             amount: -10.00,
                             currency: Currency {
@@ -27,7 +28,8 @@ TransactionHolder {
                     },
                     BankTransaction {
                         date: 2025-12-01,
-                        description: "PRZELEW ZEWNĘTRZNY WYCHODZĄCY | Tytul 2 | Name Surname",
+                        description: "PRZELEW ZEWNĘTRZNY WYCHODZĄCY | Tytul 2",
+                        counterparty: "Name Surname",
                         amount: Money {
                             amount: -1000.00,
                             currency: Currency {
@@ -79,6 +81,7 @@ TransactionHolder {
                     BankTransaction {
                         date: 2025-12-29,
                         description: "PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY | Tytul 3",
+                        counterparty: "",
                         amount: Money {
                             amount: 2.71,
                             currency: Currency {
