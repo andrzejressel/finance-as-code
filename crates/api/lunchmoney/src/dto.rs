@@ -38,6 +38,35 @@ pub struct GetTransactionsParams {
     pub offset: Option<u32>,
 }
 
+/// A single transaction entry for `POST /transactions` (bulk insert).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct InsertTransactionDto {
+    pub date: String,
+    pub amount: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payee: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manual_account_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_id: Option<String>,
+}
+
+/// Request body for `POST /transactions` (bulk insert, 1-500 transactions).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PostTransactionsRequest {
+    pub transactions: Vec<InsertTransactionDto>,
+}
+
+/// Response envelope for `POST /transactions` (bulk insert).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PostTransactionsResponse {
+    pub transactions: Vec<TransactionDto>,
+}
+
 /// A single transaction update entry for `PUT /transactions`.
 ///
 /// Only `Some` fields are serialised and sent to the API; `None` fields are omitted.

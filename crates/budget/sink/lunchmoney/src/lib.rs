@@ -1,11 +1,16 @@
-use log::info;
+use itertools::Itertools;
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
+use finance_as_code_api_lunchmoney::dto::{
+    DeleteTransactionsRequest, InsertTransactionDto, PostTransactionsRequest,
+};
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::sink::Sink;
+use log::info;
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
-use finance_as_code_api_lunchmoney::dto::{DeleteTransactionsRequest, PutTransactionsRequest};
+
+const MAX_TRANSACTIONS_PER_REQUEST: usize = 500;
 
 #[derive(Clone, Debug)]
 pub struct LunchMoneyApiKey(String);
@@ -78,7 +83,7 @@ impl Sink for LunchMoneySink {
         "Lunch Money"
     }
 
-    fn write(&self, _transactions: &[Transaction]) -> Result<()> {
+    fn write(&self, transactions: &[Transaction]) -> Result<()> {
         let client = finance_as_code_api_lunchmoney::api::LunchMoneyClient::new(
             "https://api.lunchmoney.dev/v2".to_string(),
             self.config.api_key.value().into(),
@@ -97,28 +102,95 @@ impl Sink for LunchMoneySink {
             .context("failed to get existing transactions for account")?;
 
         if !all_transactions.is_empty() {
-            info!("Remove existing '{}' transactions from Lunch Money account '{}'", all_transactions.len(), self.config.account_name.value());
-            client.delete_transactions(&DeleteTransactionsRequest {
-                ids: all_transactions.into_iter().map(|transaction| transaction.id).collect(),
-            })
-                .context("failed to delete existing transactions")?;
-
-        } else {
-            info!("No existing transactions found in Lunch Money account '{}'", self.config.account_name.value());
-        }
-        
-        client.put_transactions(
-            &PutTransactionsRequest {
-                transactions: vec![],
+            info!(
+                "Remove existing '{}' transactions from Lunch Money account '{}'",
+                all_transactions.len(),
+                self.config.account_name.value()
+            );
+            
+            for chunk in &all_transactions.iter().chunks(MAX_TRANSACTIONS_PER_REQUEST) {
+                let ids = chunk.map(|t| &t.id).cloned().collect_vec();
+                client
+                    .delete_transactions(&DeleteTransactionsRequest {
+                        ids
+                    })
+                    .context("failed to delete existing transactions")?;
             }
-        )
-            .context("failed to put transactions to Lunch Money")?;
+            // 
+            // client
+            //     .delete_transactions(&DeleteTransactionsRequest {
+            //         ids: all_transactions
+            //             .into_iter()
+            //             .map(|transaction| transaction.id)
+            //             .collect(),
+            //     })
+            //     .context("failed to delete existing transactions")?;
+        } else {
+            info!(
+                "No existing transactions found in Lunch Money account '{}'",
+                self.config.account_name.value()
+            );
+        }
+
+        if transactions.is_empty() {
+            info!(
+                "No transactions to add to Lunch Money account '{}'; skipping insert",
+                self.config.account_name.value()
+            );
+            return Ok(());
+        }
+
+        info!(
+            "Adding '{}' transactions to Lunch Money account '{}'",
+            transactions.len(),
+            self.config.account_name.value()
+        );
+        
+        let mut transactions = transactions.to_vec();
+
+        for chunk in transactions.chunks(MAX_TRANSACTIONS_PER_REQUEST) {
+            let transactions = chunk
+                .iter()
+                .map(|transaction| Self::to_insert_transaction(transaction, account_id))
+                .collect();
+
+            let r = client
+                .post_transactions(&PostTransactionsRequest { transactions })
+                .context("failed to post transactions to Lunch Money")
+                .context_with(|| format!("Failed chunk: {:?}", chunk));
+            
+            if r.is_err() {
+                for transaction in chunk {
+                    
+                    client
+                        .post_transactions(&PostTransactionsRequest {
+                            transactions: vec![Self::to_insert_transaction(transaction, account_id)],
+                        })
+                        .context("failed to post transaction to Lunch Money")
+                        .context_with(|| format!("Failed transaction: {:?}", transaction))?;
+                    
+                    // info!("Failed transaction: {:?}", transaction);
+                }
+            }
+        }
 
         Ok(())
     }
 }
 
 impl LunchMoneySink {
+    fn to_insert_transaction(transaction: &Transaction, account_id: i64) -> InsertTransactionDto {
+        InsertTransactionDto {
+            date: transaction.date.format("%Y-%m-%d").to_string(),
+            amount: format!("{:.4}", transaction.amount.amount()),
+            currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
+            notes: Some(transaction.description.clone()),
+            payee: None,
+            manual_account_id: Some(account_id),
+            external_id: Some(transaction.id.to_string()),
+        }
+    }
+
     fn get_account_id_for_account_name(
         account_name: &LunchMoneyAccountName,
         api_client: &impl LunchMoneyApi,
@@ -139,7 +211,8 @@ impl LunchMoneySink {
 mod tests {
     use super::*;
     use finance_as_code_api_lunchmoney::dto::{
-        DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PutTransactionsRequest,
+        DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto,
+        PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
         PutTransactionsResponse, TransactionDto,
     };
     use googletest::prelude::*;
@@ -166,6 +239,13 @@ mod tests {
             _request: &PutTransactionsRequest,
         ) -> RootResult<PutTransactionsResponse> {
             panic!("put_transactions should not be called in this test")
+        }
+
+        fn post_transactions(
+            &self,
+            _request: &PostTransactionsRequest,
+        ) -> RootResult<PostTransactionsResponse> {
+            panic!("post_transactions should not be called in this test")
         }
 
         fn delete_transactions(&self, _request: &DeleteTransactionsRequest) -> RootResult<()> {

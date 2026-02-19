@@ -1313,6 +1313,7 @@ dependencies = [
  "finance_as_code_api_lunchmoney",
  "finance_as_code_budget_core",
  "googletest",
+ "itertools",
  "log",
  "rootcause",
  "serde_json",

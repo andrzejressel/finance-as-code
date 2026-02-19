@@ -1,8 +1,9 @@
 use crate::ApiKey;
 use crate::dto::{
-    DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PutTransactionsRequest,
-    PutTransactionsResponse, TransactionDto,
+    DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PostTransactionsRequest,
+    PostTransactionsResponse, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
 };
+use reqwest::header::HeaderMap;
 use rootcause::prelude::ResultExt;
 use rootcause::{Result, bail};
 
@@ -34,6 +35,12 @@ pub trait LunchMoneyApi {
     /// Update up to 500 transactions in a single call (`PUT /transactions`).
     fn put_transactions(&self, request: &PutTransactionsRequest)
     -> Result<PutTransactionsResponse>;
+
+    /// Insert up to 500 transactions in a single call (`POST /transactions`).
+    fn post_transactions(
+        &self,
+        request: &PostTransactionsRequest,
+    ) -> Result<PostTransactionsResponse>;
 
     /// Delete multiple transactions in one call (`DELETE /transactions`).
     fn delete_transactions(&self, request: &DeleteTransactionsRequest) -> Result<()>;
@@ -70,15 +77,29 @@ impl LunchMoneyClient {
                 .context("Failed to deserialize GET /transactions response")?)
         } else {
             let status = response.status();
+            let headers = format_headers(response.headers());
             let body = response.text().context_with(|| {
                 format!(
                     "Failed to read error body from GET /transactions (status {})",
                     status
                 )
             })?;
-            bail!("GET /transactions returned error: {} - {}", status, body);
+            bail!(
+                "GET /transactions returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
         }
     }
+}
+
+fn format_headers(headers: &HeaderMap) -> String {
+    headers
+        .iter()
+        .map(|(name, value)| format!("{}={}", name, value.to_str().unwrap_or("<non-UTF8>")))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 impl LunchMoneyApi for LunchMoneyClient {
@@ -97,13 +118,19 @@ impl LunchMoneyApi for LunchMoneyClient {
                 .manual_accounts)
         } else {
             let status = response.status();
+            let headers = format_headers(response.headers());
             let body = response.text().context_with(|| {
                 format!(
                     "Failed to read error body from GET /manual_accounts (status {})",
                     status
                 )
             })?;
-            bail!("GET /manual_accounts returned error: {} - {}", status, body);
+            bail!(
+                "GET /manual_accounts returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
         }
     }
 
@@ -152,13 +179,53 @@ impl LunchMoneyApi for LunchMoneyClient {
                 .context("Failed to deserialize PUT /transactions response")?)
         } else {
             let status = response.status();
+            let headers = format_headers(response.headers());
             let body = response.text().context_with(|| {
                 format!(
                     "Failed to read error body from PUT /transactions (status {})",
                     status
                 )
             })?;
-            bail!("PUT /transactions returned error: {} - {}", status, body);
+            bail!(
+                "PUT /transactions returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
+        }
+    }
+
+    fn post_transactions(
+        &self,
+        request: &PostTransactionsRequest,
+    ) -> Result<PostTransactionsResponse> {
+        let response = self
+            .client
+            .post(format!("{}/transactions", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.api_key.value()))
+            .json(request)
+            .send()
+            .context("Failed to send POST /transactions request")?;
+
+        if response.status().is_success() {
+            Ok(response
+                .json::<PostTransactionsResponse>()
+                .context("Failed to deserialize POST /transactions response")?)
+        } else {
+            let status = response.status();
+            let headers = format_headers(response.headers());
+            let body = response.text().context_with(|| {
+                format!(
+                    "Failed to read error body from POST /transactions (status {})",
+                    status
+                )
+            })?;
+            bail!(
+                "POST /transactions returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
         }
     }
 
@@ -175,13 +242,19 @@ impl LunchMoneyApi for LunchMoneyClient {
             Ok(())
         } else {
             let status = response.status();
+            let headers = format_headers(response.headers());
             let body = response.text().context_with(|| {
                 format!(
                     "Failed to read error body from DELETE /transactions (status {})",
                     status
                 )
             })?;
-            bail!("DELETE /transactions returned error: {} - {}", status, body);
+            bail!(
+                "DELETE /transactions returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
         }
     }
 }
@@ -191,7 +264,8 @@ mod tests {
     use super::*;
     use crate::ApiKey;
     use crate::dto::{
-        DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PutTransactionsRequest,
+        DeleteTransactionsRequest, GetTransactionsParams, InsertTransactionDto, ManualAccountDto,
+        PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
         PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
     use googletest::prelude::*;
@@ -378,6 +452,68 @@ mod tests {
         client
             .delete_transactions(&DeleteTransactionsRequest { ids: vec![1, 2, 3] })
             .unwrap();
+
+        mock.assert();
+        Ok(())
+    }
+
+    #[test]
+    fn post_transactions_sends_and_receives_correctly() -> googletest::Result<()> {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/transactions")
+                .header("Authorization", "Bearer test_key")
+                .json_body(json!({
+                    "transactions": [
+                        {
+                            "date": "2024-01-01",
+                            "amount": "100.0000",
+                            "currency": "USD",
+                            "payee": "Payee 1",
+                            "manual_account_id": 7,
+                            "external_id": "external_1"
+                        }
+                    ]
+                }));
+            then.status(201)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "transactions": [
+                        {
+                            "id": 1,
+                            "date": "2024-01-01",
+                            "amount": "100.0000",
+                            "currency": "USD",
+                            "payee": "Payee 1",
+                            "notes": null
+                        }
+                    ],
+                    "skipped_duplicates": []
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let response = client
+            .post_transactions(&PostTransactionsRequest {
+                transactions: vec![InsertTransactionDto {
+                    date: "2024-01-01".to_string(),
+                    amount: "100.0000".to_string(),
+                    currency: Some("USD".to_string()),
+                    payee: Some("Payee 1".to_string()),
+                    notes: None,
+                    manual_account_id: Some(7),
+                    external_id: Some("external_1".to_string()),
+                }],
+            })
+            .unwrap();
+
+        verify_that!(
+            response,
+            eq(&PostTransactionsResponse {
+                transactions: vec![tx(1, "2024-01-01", "Payee 1", None)],
+            })
+        )?;
 
         mock.assert();
         Ok(())

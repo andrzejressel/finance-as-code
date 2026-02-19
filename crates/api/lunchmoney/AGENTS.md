@@ -22,8 +22,10 @@ Direct OpenAPI yaml: https://alpha.lunchmoney.dev/v2/openapi
 
 **Automatic Pagination**: `get_all_transactions` automatically follows `has_more` and `offset` flags to fetch the entire result set in a single call.
 
+**Bulk Inserts**: New transactions must be created with `POST /transactions` using insert payloads (not `PUT /transactions`), with a max of 500 transactions per request.
+
 **Partial Updates**: `put_transactions` uses `UpdateTransactionDto` which only serializes `Some` fields, allowing for surgical updates to existing transactions.
 
 **Delete Semantics**: bulk delete (`DELETE /transactions` with `{ ids }`) is treated as success on HTTP `204 No Content`.
 
-**Error Handling**: Uses `rootcause` for context-aware error reporting, capturing both HTTP status codes and response bodies on failure.
+**Error Handling**: Uses `rootcause` for context-aware error reporting, capturing HTTP status code, response headers, and response body on failure.
