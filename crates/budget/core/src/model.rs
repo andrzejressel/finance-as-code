@@ -1,19 +1,13 @@
 use chrono::{Datelike, Months};
+use itertools::Itertools;
 use std::fmt::Display;
 use uuid::Uuid;
 
 pub fn join_non_empty(parts: &[&str], separator: &str) -> String {
     parts
         .iter()
-        .filter_map(|part| {
-            let trimmed = part.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        })
-        .collect::<Vec<_>>()
+        .map(|part| part.trim())
+        .filter(|part| !part.is_empty())
         .join(separator)
 }
 
