@@ -58,3 +58,9 @@ pub struct PutTransactionsRequest {
 pub struct PutTransactionsResponse {
     pub transactions: Vec<TransactionDto>,
 }
+
+/// Request body for `DELETE /transactions` (bulk delete).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DeleteTransactionsRequest {
+    pub ids: Vec<i64>,
+}

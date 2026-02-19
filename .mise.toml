@@ -9,3 +9,4 @@ opencode = "1.2.6"
 "gemini-cli" = "0.29.1"
 "aqua:github/copilot-cli" = "0.0.411"
 "codex" = "0.104.0"
+rg = "15.1.0" # Codex seems to use it a lot

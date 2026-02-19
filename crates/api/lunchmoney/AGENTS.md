@@ -20,4 +20,6 @@ API Documentation: https://alpha.lunchmoney.dev/v2/docs
 
 **Partial Updates**: `put_transactions` uses `UpdateTransactionDto` which only serializes `Some` fields, allowing for surgical updates to existing transactions.
 
+**Delete Semantics**: bulk delete (`DELETE /transactions` with `{ ids }`) is treated as success on HTTP `204 No Content`.
+
 **Error Handling**: Uses `rootcause` for context-aware error reporting, capturing both HTTP status codes and response bodies on failure.

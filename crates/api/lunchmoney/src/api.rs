@@ -1,6 +1,7 @@
 use crate::ApiKey;
 use crate::dto::{
-    GetTransactionsParams, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
+    DeleteTransactionsRequest, GetTransactionsParams, PutTransactionsRequest,
+    PutTransactionsResponse, TransactionDto,
 };
 use rootcause::prelude::ResultExt;
 use rootcause::{Result, bail};
@@ -24,6 +25,9 @@ pub trait LunchMoneyApi {
     /// Update up to 500 transactions in a single call (`PUT /transactions`).
     fn put_transactions(&self, request: &PutTransactionsRequest)
     -> Result<PutTransactionsResponse>;
+
+    /// Delete multiple transactions in one call (`DELETE /transactions`).
+    fn delete_transactions(&self, request: &DeleteTransactionsRequest) -> Result<()>;
 }
 
 /// Real HTTP client backed by the Lunch Money v2 REST API.
@@ -122,6 +126,29 @@ impl LunchMoneyApi for LunchMoneyClient {
             bail!("PUT /transactions returned error: {} - {}", status, body);
         }
     }
+
+    fn delete_transactions(&self, request: &DeleteTransactionsRequest) -> Result<()> {
+        let response = self
+            .client
+            .delete(format!("{}/transactions", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.api_key.value()))
+            .json(request)
+            .send()
+            .context("Failed to send DELETE /transactions request")?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let body = response.text().context_with(|| {
+                format!(
+                    "Failed to read error body from DELETE /transactions (status {})",
+                    status
+                )
+            })?;
+            bail!("DELETE /transactions returned error: {} - {}", status, body);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -129,8 +156,8 @@ mod tests {
     use super::*;
     use crate::ApiKey;
     use crate::dto::{
-        GetTransactionsParams, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
-        UpdateTransactionDto,
+        DeleteTransactionsRequest, GetTransactionsParams, PutTransactionsRequest,
+        PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
     use googletest::prelude::*;
     use httpmock::MockServer;
@@ -255,6 +282,26 @@ mod tests {
                 transactions: vec![tx(1, "2024-01-01", "Payee 1", Some("Updated notes"))],
             })
         )?;
+
+        mock.assert();
+        Ok(())
+    }
+
+    #[test]
+    fn delete_transactions_sends_ids_to_bulk_delete_endpoint() -> googletest::Result<()> {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::DELETE)
+                .path("/transactions")
+                .header("Authorization", "Bearer test_key")
+                .json_body(json!({"ids": [1, 2, 3]}));
+            then.status(204);
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        client
+            .delete_transactions(&DeleteTransactionsRequest { ids: vec![1, 2, 3] })
+            .unwrap();
 
         mock.assert();
         Ok(())
