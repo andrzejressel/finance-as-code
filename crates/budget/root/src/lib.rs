@@ -19,10 +19,18 @@ pub use finance_as_code_budget_source_lunchflow::create_lunchflow_downloader;
 #[cfg(feature = "source_lunchflow")]
 pub use finance_as_code_budget_source_lunchflow::create_lunchflow_file_reader;
 
-#[cfg(feature = "sink_treeline")]
+#[cfg(feature = "__sink_treeline__nonbundled_duckdb")]
 pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
-#[cfg(feature = "sink_treeline")]
+#[cfg(feature = "__sink_treeline__nonbundled_duckdb")]
 pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
+
+#[cfg(feature = "sink_lunchmoney")]
+pub mod lunchmoney {
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
+    pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
+}
 
 pub fn run(
     sources: Vec<Box<dyn Source>>,
@@ -34,11 +42,13 @@ pub fn run(
     let mut holders = Vec::new();
 
     for source in sources {
+        info!("Running source {}", source.name());
         holders.push(
             source
                 .read()
-                .context_with(|| format!("Failed to read from source [{}]", source.name()))?,
+                .context_with(|| format!("Failed to read from source {}", source.name()))?,
         );
+        info!("Finished running source {}", source.name());
     }
 
     let holder = TransactionHolder::combine_vec(holders);
@@ -47,10 +57,10 @@ pub fn run(
         .context("Failed to map bank transactions to transactions")?;
 
     for sink in sinks {
-        info!("Writing to sink [{}]", sink.name());
+        info!("Writing to sink {}", sink.name());
         sink.write(&transactions)
-            .context_with(|| format!("Failed to write to sink [{}]", sink.name()))?;
-        info!("Finished writing to sink [{}]", sink.name());
+            .context_with(|| format!("Failed to write to sink {}", sink.name()))?;
+        info!("Finished writing to sink {}", sink.name());
     }
 
     Ok(())
