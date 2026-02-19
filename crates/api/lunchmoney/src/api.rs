@@ -221,7 +221,7 @@ mod tests {
                 .json_body(json!({
                     "manual_accounts": [
                         { "id": 1, "name": "Cash Wallet", "display_name": "Cash" },
-                        { "id": 2, "name": null, "display_name": null }
+                        { "id": 2, "name": "Savings Jar", "display_name": "Credit" }
                     ]
                 }));
         });
@@ -234,13 +234,13 @@ mod tests {
             eq(&vec![
                 ManualAccountDto {
                     id: 1,
-                    name: Some("Cash Wallet".to_string()),
-                    display_name: Some("Cash".to_string()),
+                    name: "Cash Wallet".to_string(),
+                    display_name: "Cash".to_string(),
                 },
                 ManualAccountDto {
                     id: 2,
-                    name: None,
-                    display_name: None,
+                    name: "Savings Jar".to_string(),
+                    display_name: "Credit".to_string(),
                 },
             ])
         )?;

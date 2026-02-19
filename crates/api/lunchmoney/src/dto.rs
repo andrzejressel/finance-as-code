@@ -15,10 +15,8 @@ pub struct TransactionDto {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ManualAccountDto {
     pub id: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display_name: Option<String>,
+    pub name: String,
+    pub display_name: String,
 }
 
 /// Optional query parameters for `GET /transactions`.

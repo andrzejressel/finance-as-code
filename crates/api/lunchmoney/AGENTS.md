@@ -4,6 +4,8 @@ Low-level client for the Lunch Money v2 API.
 
 API Documentation: https://alpha.lunchmoney.dev/v2/docs
 
+Direct OpenAPI yaml: https://alpha.lunchmoney.dev/v2/openapi
+
 ## Directives
 
 **Prioritize Documentation**: ALWAYS use the provided API Documentation link above as your primary source of truth. Do NOT use external web searches for API details unless the documentation link is unreachable or the specific information is demonstrably missing after thorough review of the provided link.
