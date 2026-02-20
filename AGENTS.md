@@ -20,6 +20,10 @@ just install
 
 > **Never use `latest` as a version in `.mise.toml`.** All tools must be pinned to an explicit version to ensure reproducible environments across machines and CI. When adding or upgrading a tool, look up the current release and pin it exactly.
 
+### Pinning Dependencies
+
+- **serde_yaml** — the version must be pinned exactly to `0.9.34+deprecated` in `Cargo.toml`. Do not remove the `+deprecated` suffix, as it is required for compatibility with other components in the workspace.
+
 ### Environment variables
 
 `.cargo/config.toml` sets the following env var for all Cargo invocations:

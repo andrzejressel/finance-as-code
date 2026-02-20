@@ -6,7 +6,6 @@ mod transactions_holder;
 
 use bon::Builder;
 use chrono::NaiveDate;
-use nonempty_collections::*;
 use rootcause::Result;
 use rusty_money::Money;
 use rusty_money::iso::Currency;

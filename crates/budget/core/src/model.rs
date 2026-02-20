@@ -1,4 +1,4 @@
-use chrono::{Datelike, Months};
+use chrono::Datelike;
 use itertools::Itertools;
 use std::fmt::Display;
 use uuid::Uuid;
@@ -49,15 +49,5 @@ impl MonthYear {
             month: date.month(),
             year: date.year(),
         }
-    }
-
-    fn get_first_and_last_day(&self) -> (chrono::NaiveDate, chrono::NaiveDate) {
-        let first_day = chrono::NaiveDate::from_ymd_opt(self.year, self.month, 1).unwrap();
-        let last_day = first_day
-            .checked_add_months(Months::new(1))
-            .unwrap()
-            .pred_opt()
-            .unwrap();
-        (first_day, last_day)
     }
 }
