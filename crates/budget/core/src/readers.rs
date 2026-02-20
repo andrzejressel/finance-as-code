@@ -15,7 +15,7 @@ pub struct LocalDirectorySource {
 }
 
 impl LocalDirectorySource {
-    pub fn new(dir: PathBuf, file_reader: impl FileReader + 'static) -> Result<impl Source> {
+    pub fn new(dir: PathBuf, file_reader: impl FileReader + 'static) -> Result<Self> {
         if !dir.exists() {
             bail!("{:?} does not exist", dir);
         }
