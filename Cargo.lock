@@ -1326,6 +1326,7 @@ name = "finance_as_code_setup_github"
 version = "0.0.0-DEV"
 dependencies = [
  "anyhow",
+ "bon",
  "itertools",
  "pulumi_gestalt_build",
  "pulumi_gestalt_rust",
