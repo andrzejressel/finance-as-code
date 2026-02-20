@@ -76,4 +76,3 @@ pub fn get_context() -> Result<TreelineContext> {
         })
         .context("Failed to initialize treeline context")
 }
-
