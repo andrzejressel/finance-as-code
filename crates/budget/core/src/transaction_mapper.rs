@@ -22,8 +22,9 @@ pub fn map_bank_transaction_to_transaction(
             id: Uuid::new_v5(&Uuid::NAMESPACE_OID, &stable_id),
             date: bank_tx.date,
             description: bank_tx.description,
+            counterparty: bank_tx.counterparty,
             amount: bank_tx.amount,
-            other_side_account_number: bank_tx.other_side_account_number.clone(),
+            other_side_account_number: bank_tx.other_side_account_number,
         };
         transactions.push(transaction);
     }
@@ -53,10 +54,11 @@ fn verify_unique_ids(transactions: &[Transaction]) -> Result<()> {
 
 fn generate_stable_id(bank_tx: &BankTransaction, counter: u32) -> Vec<u8> {
     let string_to_hash = format!(
-        "{}-{}-{}-{:?}-{}",
+        "{}-{}-{}-{}-{:?}-{}",
         bank_tx.date,
         bank_tx.description,
         bank_tx.amount,
+        bank_tx.counterparty,
         bank_tx.other_side_account_number,
         counter
     );
@@ -79,6 +81,7 @@ mod tests {
                     id: Uuid::new_v4(),
                     date: Default::default(),
                     description: "Tx1".to_string(),
+                    counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
                 },
@@ -86,6 +89,7 @@ mod tests {
                     id: Uuid::new_v4(),
                     date: Default::default(),
                     description: "Tx2".to_string(),
+                    counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
                 },
@@ -101,6 +105,7 @@ mod tests {
                     id: duplicate_id,
                     date: Default::default(),
                     description: "Tx1".to_string(),
+                    counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
                 },
@@ -108,6 +113,7 @@ mod tests {
                     id: duplicate_id,
                     date: Default::default(),
                     description: "Tx2".to_string(),
+                    counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
                 },
@@ -132,12 +138,14 @@ mod tests {
                 BankTransaction {
                     date: Default::default(),
                     description: "Tx".to_string(),
+                    counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
                 },
                 BankTransaction {
                     date: Default::default(),
                     description: "Tx".to_string(),
+                    counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
                 },
@@ -150,16 +158,18 @@ mod tests {
                 transactions,
                 eq(&vec![
                     Transaction {
-                        id: Uuid::from_str("95b38cc2-acbe-588d-a454-216ac8962a0e").unwrap(),
+                        id: Uuid::from_str("ef3d18c2-d126-5b14-8161-bd5cafef5814").unwrap(),
                         date: Default::default(),
                         description: "Tx".to_string(),
+                        counterparty: "".to_string(),
                         amount: Money::from_major(100, USD),
                         other_side_account_number: None
                     },
                     Transaction {
-                        id: Uuid::from_str("dad079cb-7189-553b-a9a2-974e422f99db").unwrap(),
+                        id: Uuid::from_str("79f38cd8-91f6-526b-966b-2910027698b6").unwrap(),
                         date: Default::default(),
                         description: "Tx".to_string(),
+                        counterparty: "".to_string(),
                         amount: Money::from_major(100, USD),
                         other_side_account_number: None
                     },

@@ -1,6 +1,15 @@
 use chrono::{Datelike, Months};
+use itertools::Itertools;
 use std::fmt::Display;
 use uuid::Uuid;
+
+pub fn join_non_empty(parts: &[&str], separator: &str) -> String {
+    parts
+        .iter()
+        .map(|part| part.trim())
+        .filter(|part| !part.is_empty())
+        .join(separator)
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AccountId(Uuid);

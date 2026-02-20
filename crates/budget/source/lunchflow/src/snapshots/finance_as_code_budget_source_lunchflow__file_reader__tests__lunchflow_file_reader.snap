@@ -9,7 +9,8 @@ TransactionHolder {
                 [
                     BankTransaction {
                         date: 2026-02-12,
-                        description: "Merchant 1 | Description 1",
+                        description: "Description 1",
+                        counterparty: "Merchant 1",
                         amount: Money {
                             amount: -14.98,
                             currency: Currency {
@@ -27,7 +28,8 @@ TransactionHolder {
                     },
                     BankTransaction {
                         date: 2026-02-12,
-                        description: "Merchant 2 | ",
+                        description: "",
+                        counterparty: "Merchant 2",
                         amount: Money {
                             amount: -17.85,
                             currency: Currency {

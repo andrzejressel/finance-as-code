@@ -1,6 +1,7 @@
 use bon::Builder;
 use chrono::NaiveDate;
 use encoding_rs::WINDOWS_1250;
+use finance_as_code_budget_core::model::join_non_empty;
 use finance_as_code_budget_core::{BankTransaction, FileReader, NonEmptyString, TransactionHolder};
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
@@ -111,7 +112,7 @@ impl FileReader for MBankReader {
             }
 
             let date_str = record.get(0).unwrap_or("").trim();
-            let description = record.get(2).unwrap_or("").trim();
+            let operation_description = record.get(2).unwrap_or("").trim();
             let title = record.get(3).unwrap_or("").trim();
             let sender_receiver = record.get(4).unwrap_or("").trim();
             let account_number = record.get(5).unwrap_or("").trim();
@@ -128,14 +129,14 @@ impl FileReader for MBankReader {
             let amount_decimal = parse_amount(amount_str)?;
             let money_amount = Money::from_decimal(amount_decimal, currency);
 
-            let full_description = format!("{} | {} | {}", description, title, sender_receiver);
-            let clean_desc = full_description.trim().trim_matches('|').trim().to_string();
+            let description = join_non_empty(&[operation_description, title], " | ");
 
             let account_number = account_number.trim_matches(|c| c == '\'');
 
             let transaction = BankTransaction::builder()
                 .date(date)
-                .description(clean_desc)
+                .description(description)
+                .counterparty(sender_receiver.to_string())
                 .amount(money_amount)
                 .maybe_other_side_account_number(NonEmptyString::new(account_number.to_string()))
                 .build();

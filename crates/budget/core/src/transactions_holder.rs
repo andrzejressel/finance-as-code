@@ -164,12 +164,14 @@ mod tests {
         let transaction1 = BankTransaction {
             date: date!(2024 - 01 - 01),
             description: "Transaction 1".to_string(),
+            counterparty: "".to_string(),
             amount: Money::from_major(100, iso::USD),
             other_side_account_number: NonEmptyString::new_str("123456789"),
         };
         let transaction2 = BankTransaction {
             date: date!(2024 - 01 - 03),
             description: "Transaction 2".to_string(),
+            counterparty: "".to_string(),
             amount: Money::from_major(200, iso::USD),
             other_side_account_number: NonEmptyString::new_str("987654321"),
         };
@@ -202,12 +204,14 @@ mod tests {
             let transaction = BankTransaction {
                 date: date!(2024 - 01 - 01),
                 description: "Transaction".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(100, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("123456789"),
             };
             let transaction2 = BankTransaction {
                 date: date!(2024 - 01 - 03),
                 description: "Transaction 2".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(200, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("987654321"),
             };
@@ -233,12 +237,14 @@ mod tests {
             let transaction1 = BankTransaction {
                 date: date!(2024 - 01 - 01),
                 description: "Transaction 1".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(100, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("123456789"),
             };
             let transaction2 = BankTransaction {
                 date: date!(2024 - 01 - 03),
                 description: "Transaction 2".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(200, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("987654321"),
             };
@@ -263,12 +269,14 @@ mod tests {
             let transaction1 = BankTransaction {
                 date: date!(2024 - 01 - 01),
                 description: "Transaction 1".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(100, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("123456789"),
             };
             let transaction2 = BankTransaction {
                 date: date!(2024 - 01 - 02),
                 description: "Transaction 2".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(200, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("987654321"),
             };
@@ -276,12 +284,14 @@ mod tests {
             let transaction3 = BankTransaction {
                 date: date!(2024 - 01 - 03),
                 description: "Transaction 3".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(300, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("555555555"),
             };
             let transaction4 = BankTransaction {
                 date: date!(2024 - 01 - 04),
                 description: "Transaction 4".to_string(),
+                counterparty: "".to_string(),
                 amount: Money::from_major(400, iso::USD),
                 other_side_account_number: NonEmptyString::new_str("666666666"),
             };
