@@ -10,11 +10,9 @@ bon.workspace = true
 rootcause.workspace = true
 rusty-money.workspace = true
 rust_decimal.workspace = true
-regex.workspace = true
 csv.workspace = true
 encoding_rs.workspace = true
 chrono.workspace = true
-log.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
