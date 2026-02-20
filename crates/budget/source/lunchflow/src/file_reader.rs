@@ -31,11 +31,8 @@ impl FileReader for LunchflowFileReader {
 
             let amount = rusty_money::Money::from_decimal(decimal, currency);
 
-            let description = format!(
-                "{} | {}",
-                tx.merchant.unwrap_or("".to_string()),
-                tx.description.unwrap_or("".to_string())
-            );
+            let description = tx.description.unwrap_or_default().trim().to_string();
+            let counterparty = tx.merchant.unwrap_or_default().trim().to_string();
 
             let date = chrono::NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d")
                 .context_with(|| format!("Failed to parse date: [{}]", tx.date))?;
@@ -43,6 +40,7 @@ impl FileReader for LunchflowFileReader {
             let bank_tx = BankTransaction::builder()
                 .amount(amount)
                 .description(description)
+                .counterparty(counterparty)
                 .date(date)
                 .build();
 
