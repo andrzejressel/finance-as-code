@@ -43,6 +43,8 @@ jobs:
         run: just install
       - name: Check
         run: just check
+      - name: Test
+        run: just test
       - name: Test with coverage
         run: just test-coverage
       - name: Upload coverage data to codecov
