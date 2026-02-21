@@ -84,7 +84,7 @@ mod tests {
     use httpmock::MockServer;
 
     #[test]
-    fn should_deserialize_transactions() -> Result<()> {
+    fn should_deserialize_transactions() {
         let json = r#"
         {
             "transactions": [
@@ -118,7 +118,7 @@ mod tests {
         );
         let transactions = api.get_transactions(&1.into()).unwrap();
 
-        verify_that!(
+        assert_that!(
             transactions,
             eq(&LunchFlowTransactions {
                 transactions: vec![LunchFlowTransaction {
@@ -132,10 +132,8 @@ mod tests {
                     is_pending: Some(false),
                 }]
             })
-        )?;
+        );
 
         mock.assert();
-
-        Ok(())
     }
 }

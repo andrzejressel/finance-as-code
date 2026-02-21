@@ -156,11 +156,10 @@ mod tests {
     use finance_as_code_utils_chrono::date;
     use googletest::prelude::eq;
     use googletest::prelude::*;
-    use googletest::verify_that;
     use rusty_money::{Money, iso};
 
     #[test]
-    fn test_transaction_holder() -> Result<()> {
+    fn test_transaction_holder() {
         let transaction1 = BankTransaction {
             date: date!(2024 - 01 - 01),
             description: "Transaction 1".to_string(),
@@ -180,27 +179,25 @@ mod tests {
 
         let holder = group_bank_transactions(NEVec::try_from_vec(transactions).unwrap());
 
-        verify_that!(holder.start_date, eq(date!(2024 - 01 - 01)))?;
-        verify_that!(holder.end_date, eq(date!(2024 - 01 - 03)))?;
-        verify_that!(
+        assert_that!(holder.start_date, eq(date!(2024 - 01 - 01)));
+        assert_that!(holder.end_date, eq(date!(2024 - 01 - 03)));
+        assert_that!(
             holder.transactions,
             container_eq(vec![vec![transaction1], vec![], vec![transaction2],])
-        )?;
-        Ok(())
+        );
     }
 
     mod holder {
         use super::*;
 
         #[test]
-        fn create_holder_from_empty_transactions() -> Result<()> {
+        fn create_holder_from_empty_transactions() {
             let holder = TransactionHolderVariants::from_transactions(vec![]);
-            verify_that!(holder, eq(&TransactionHolderVariants::Empty))?;
-            Ok(())
+            assert_that!(holder, eq(&TransactionHolderVariants::Empty));
         }
 
         #[test]
-        fn create_holder_from_non_empty_transactions() -> Result<()> {
+        fn create_holder_from_non_empty_transactions() {
             let transaction = BankTransaction {
                 date: date!(2024 - 01 - 01),
                 description: "Transaction".to_string(),
@@ -219,7 +216,7 @@ mod tests {
                 transaction.clone(),
                 transaction2.clone(),
             ]);
-            verify_that!(
+            assert_that!(
                 holder,
                 eq(&TransactionHolderVariants::WithItems(
                     TransactionsHolderWithItems {
@@ -228,12 +225,11 @@ mod tests {
                         end_date: date!(2024 - 01 - 03),
                     }
                 ))
-            )?;
-            Ok(())
+            );
         }
 
         #[test]
-        fn can_combine_holders() -> Result<()> {
+        fn can_combine_holders() {
             let transaction1 = BankTransaction {
                 date: date!(2024 - 01 - 01),
                 description: "Transaction 1".to_string(),
@@ -251,7 +247,7 @@ mod tests {
             let holder1 = TransactionHolderVariants::from_transactions(vec![transaction1.clone()]);
             let holder2 = TransactionHolderVariants::from_transactions(vec![transaction2.clone()]);
             let combined_holder = combine_holders(holder1, holder2);
-            verify_that!(
+            assert_that!(
                 combined_holder,
                 eq(&TransactionHolderVariants::WithItems(
                     TransactionsHolderWithItems {
@@ -260,12 +256,11 @@ mod tests {
                         end_date: date!(2024 - 01 - 03),
                     }
                 ))
-            )?;
-            Ok(())
+            );
         }
 
         #[test]
-        fn second_holder_overrides_first_holder() -> Result<()> {
+        fn second_holder_overrides_first_holder() {
             let transaction1 = BankTransaction {
                 date: date!(2024 - 01 - 01),
                 description: "Transaction 1".to_string(),
@@ -305,7 +300,7 @@ mod tests {
                 transaction4.clone(),
             ]);
             let combined_holder = combine_holders(holder1, holder2);
-            verify_that!(
+            assert_that!(
                 combined_holder,
                 eq(&TransactionHolderVariants::WithItems(
                     TransactionsHolderWithItems {
@@ -319,8 +314,7 @@ mod tests {
                         end_date: date!(2024 - 01 - 04),
                     }
                 ))
-            )?;
-            Ok(())
+            );
         }
     }
 }

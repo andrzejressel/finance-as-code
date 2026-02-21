@@ -273,7 +273,7 @@ mod tests {
     use googletest::prelude::*;
 
     #[test]
-    fn get_account_id_for_account_name_returns_account_id() -> googletest::Result<()> {
+    fn get_account_id_for_account_name_returns_account_id() {
         let mut api_client = MockLunchMoneyApi::new();
         api_client
             .expect_get_all_manual_accounts()
@@ -297,13 +297,11 @@ mod tests {
         )
         .unwrap();
 
-        verify_that!(account_id, eq(2))?;
-        Ok(())
+        assert_that!(account_id, eq(2));
     }
 
     #[test]
-    fn get_account_id_for_account_name_returns_error_when_account_is_missing()
-    -> googletest::Result<()> {
+    fn get_account_id_for_account_name_returns_error_when_account_is_missing() {
         let mut api_client = MockLunchMoneyApi::new();
         api_client
             .expect_get_all_manual_accounts()
@@ -321,10 +319,9 @@ mod tests {
         )
         .unwrap_err();
 
-        verify_that!(
+        assert_that!(
             error.to_string(),
             contains_substring("Account with name 'Savings Jar' not found")
-        )?;
-        Ok(())
+        );
     }
 }
