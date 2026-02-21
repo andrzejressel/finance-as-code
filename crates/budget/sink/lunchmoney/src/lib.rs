@@ -186,6 +186,7 @@ impl Sink for LunchMoneySink {
                 .context("failed to post transactions to Lunch Money")
                 .context_with(|| format!("Failed chunk: {:?}", chunk));
 
+            // https://discord.com/channels/842337014556262411/1134594318414389258/1474122871784869968
             if r.is_err() {
                 info!(
                     "Insert chunk {}/{} failed ({} transactions); retrying one by one for account '{}'",
@@ -216,7 +217,6 @@ impl Sink for LunchMoneySink {
                         self.config.account_name.value()
                     );
 
-                    // info!("Failed transaction: {:?}", transaction);
                 }
             } else {
                 inserted_transactions += chunk_size;
@@ -243,7 +243,7 @@ impl LunchMoneySink {
             amount: -*transaction.amount.amount(),
             currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
             notes: Some(transaction.description.clone()),
-            payee: None,
+            payee: Some(transaction.counterparty.clone()),
             manual_account_id: Some(account_id),
             external_id: Some(transaction.id.to_string()),
         }
