@@ -4,7 +4,7 @@ use log::{info, warn};
 use rootcause::Result;
 use rootcause::prelude::ResultExt;
 
-const MAX_TRANSACTIONS_PER_INSERT_REQUEST: usize = 50;
+const MAX_TRANSACTIONS_PER_INSERT_REQUEST: usize = 500;
 
 #[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait LunchMoneyTransactionsUploadService {
@@ -143,7 +143,7 @@ mod tests {
             .expect_post_transactions()
             .times(1)
             .in_sequence(&mut sequence)
-            .withf(|request| request.transactions.len() == 50)
+            .withf(|request| request.transactions.len() == 500)
             .return_once(|_| {
                 Ok(PostTransactionsResponse {
                     transactions: vec![],
@@ -156,12 +156,12 @@ mod tests {
             .withf(|request| request.transactions.len() == 1)
             .return_once(|_| {
                 Ok(PostTransactionsResponse {
-                    transactions: vec![posted_transaction(51)],
+                    transactions: vec![posted_transaction(501)],
                 })
             });
 
         let service = DefaultLunchMoneyTransactionsUploadService;
-        let transactions: Vec<_> = (1..=51)
+        let transactions: Vec<_> = (1..=501)
             .map(|id| insert_transaction(&id.to_string()))
             .collect();
 
