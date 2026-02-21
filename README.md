@@ -123,7 +123,7 @@ fn main() -> rootcause::Result<()> {
             "path/to/mbank/dir",
             create_mbank_file_reader(),
         )?),
-        // Keep downloader before LocalDirectorySource for Lunchflow files.
+        // Keep downloader before LocalDirectorySource for Lunch Flow files.
         Box::new(create_lunchflow_downloader(
             LunchFlowDownloaderConfig::builder()
                 .account_id(123_i64)
