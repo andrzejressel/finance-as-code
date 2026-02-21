@@ -35,7 +35,7 @@ Affiliate disclosure: links to Lunch Flow and Lunch Money may be affiliate links
 | [Lunch Money](https://lunchmoney.app/?refer=jgrrpmpw) | `sink_lunchmoney` | Yes       |
 
 Notes:
-- For Lunchflow, keep `create_lunchflow_downloader(...)` before `LocalDirectorySource(...)` in the `sources` vector.
+- For Lunch Flow, keep `create_lunchflow_downloader(...)` before `LocalDirectorySource(...)` in the `sources` vector.
 - `all` enables all source/sink features.
 - `all_with_db` enables all source/sink features and `bundled_db` for Treeline.
 
