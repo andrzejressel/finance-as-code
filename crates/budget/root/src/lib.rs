@@ -26,8 +26,6 @@ pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
 
 #[cfg(feature = "sink_lunchmoney")]
 pub mod lunchmoney {
-    pub use finance_as_code_api_lunchmoney::upload_service::DefaultLunchMoneyTransactionsUploadService;
-    pub use finance_as_code_api_lunchmoney::upload_service::LunchMoneyTransactionsUploadService;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;

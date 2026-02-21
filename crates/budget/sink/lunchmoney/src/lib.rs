@@ -1,16 +1,16 @@
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
-use finance_as_code_api_lunchmoney::dto::{DeleteTransactionsRequest, InsertTransactionDto};
+use finance_as_code_api_lunchmoney::deletion_service::{
+    DefaultLunchMoneyTransactionsDeletionService, LunchMoneyTransactionsDeletionService,
+};
+use finance_as_code_api_lunchmoney::dto::InsertTransactionDto;
 use finance_as_code_api_lunchmoney::upload_service::{
     DefaultLunchMoneyTransactionsUploadService, LunchMoneyTransactionsUploadService,
 };
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::sink::Sink;
-use log::info;
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
-
-const MAX_TRANSACTIONS_PER_DELETE_REQUEST: usize = 500;
 
 #[derive(Clone, Debug)]
 pub struct LunchMoneyApiKey(String);
@@ -72,12 +72,14 @@ pub struct LunchMoneySinkConfig {
 
 pub struct LunchMoneySink {
     config: LunchMoneySinkConfig,
+    transactions_deletion_service: Box<dyn LunchMoneyTransactionsDeletionService>,
     transactions_upload_service: Box<dyn LunchMoneyTransactionsUploadService>,
 }
 
 pub fn create_lunchmoney_sink(config: LunchMoneySinkConfig) -> impl Sink {
     LunchMoneySink {
         config,
+        transactions_deletion_service: Box::new(DefaultLunchMoneyTransactionsDeletionService),
         transactions_upload_service: Box::new(DefaultLunchMoneyTransactionsUploadService),
     }
 }
@@ -105,55 +107,9 @@ impl Sink for LunchMoneySink {
             )
             .context("failed to get existing transactions for account")?;
 
-        if !all_transactions.is_empty() {
-            info!(
-                "Remove existing '{}' transactions from Lunch Money account '{}'",
-                all_transactions.len(),
-                self.config.account_name.value()
-            );
-
-            let total_transactions_to_delete = all_transactions.len();
-            let total_delete_chunks =
-                total_transactions_to_delete.div_ceil(MAX_TRANSACTIONS_PER_DELETE_REQUEST);
-            let mut deleted_transactions = 0;
-
-            for (chunk_index, chunk) in all_transactions
-                .chunks(MAX_TRANSACTIONS_PER_DELETE_REQUEST)
-                .enumerate()
-            {
-                let ids: Vec<_> = chunk.iter().map(|transaction| transaction.id).collect();
-                let chunk_size = ids.len();
-
-                client
-                    .delete_transactions(&DeleteTransactionsRequest { ids })
-                    .context("failed to delete existing transactions")?;
-
-                deleted_transactions += chunk_size;
-                info!(
-                    "Deleted chunk {}/{} ({} transactions); processed {}/{} existing transactions for account '{}'",
-                    chunk_index + 1,
-                    total_delete_chunks,
-                    chunk_size,
-                    deleted_transactions,
-                    total_transactions_to_delete,
-                    self.config.account_name.value()
-                );
-            }
-            //
-            // client
-            //     .delete_transactions(&DeleteTransactionsRequest {
-            //         ids: all_transactions
-            //             .into_iter()
-            //             .map(|transaction| transaction.id)
-            //             .collect(),
-            //     })
-            //     .context("failed to delete existing transactions")?;
-        } else {
-            info!(
-                "No existing transactions found in Lunch Money account '{}'",
-                self.config.account_name.value()
-            );
-        }
+        self.transactions_deletion_service
+            .delete_transactions(&client, self.config.account_name.value(), &all_transactions)
+            .context("failed to delete existing transactions")?;
 
         let insert_transactions: Vec<_> = transactions
             .iter()
