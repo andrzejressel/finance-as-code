@@ -58,7 +58,7 @@ impl LunchMoneyTransactionsUploadService for DefaultLunchMoneyTransactionsUpload
                 .context_with(|| format!("Failed chunk: {:?}", chunk));
 
             // https://discord.com/channels/842337014556262411/1134594318414389258/1474122871784869968
-            if chunk_insert_result.is_err() {
+            if let Err(error) = chunk_insert_result {
                 info!(
                     "Insert chunk {}/{} failed ({} transactions); retrying one by one for account '{}'",
                     chunk_index + 1,
@@ -67,7 +67,7 @@ impl LunchMoneyTransactionsUploadService for DefaultLunchMoneyTransactionsUpload
                     account_name
                 );
 
-                warn!("Error inserting chunk: {:?}", chunk_insert_result.err());
+                warn!("Error inserting chunk: {:?}", error);
 
                 for transaction in chunk {
                     api_client
