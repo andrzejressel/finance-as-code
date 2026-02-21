@@ -2,12 +2,12 @@ use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
 use finance_as_code_api_lunchmoney::dto::{
     DeleteTransactionsRequest, InsertTransactionDto, PostTransactionsRequest,
 };
-use finance_as_code_budget_core::sink::Sink;
 use finance_as_code_budget_core::Transaction;
+use finance_as_code_budget_core::sink::Sink;
 use log::{info, warn};
+use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
-use rootcause::Result;
 
 const MAX_TRANSACTIONS_PER_DELETE_REQUEST: usize = 500;
 const MAX_TRANSACTIONS_PER_INSERT_REQUEST: usize = 50;
@@ -302,8 +302,8 @@ mod tests {
     }
 
     #[test]
-    fn get_account_id_for_account_name_returns_error_when_account_is_missing(
-    ) -> googletest::Result<()> {
+    fn get_account_id_for_account_name_returns_error_when_account_is_missing()
+    -> googletest::Result<()> {
         let mut api_client = MockLunchMoneyApi::new();
         api_client
             .expect_get_all_manual_accounts()

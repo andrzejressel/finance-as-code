@@ -15,7 +15,8 @@ pub struct LocalDirectorySource {
 }
 
 impl LocalDirectorySource {
-    pub fn new(dir: PathBuf, file_reader: impl FileReader + 'static) -> Result<Self> {
+    pub fn new(dir: impl Into<PathBuf>, file_reader: impl FileReader + 'static) -> Result<Self> {
+        let dir = dir.into();
         if !dir.exists() {
             bail!("{:?} does not exist", dir);
         }
@@ -98,7 +99,7 @@ mod tests {
 
     #[test]
     fn should_return_error_when_provided_directory_does_not_exist() {
-        let non_existent_dir = PathBuf::from("non_existent_directory");
+        let non_existent_dir = "non_existent_directory";
         let file_reader = MockFileReader::new();
 
         let result = LocalDirectorySource::new(non_existent_dir, file_reader);
