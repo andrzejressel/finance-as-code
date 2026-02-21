@@ -15,7 +15,9 @@ rootcause.workspace = true
 log.workspace = true
 rust_decimal.workspace = true
 mockall.workspace = true
+chrono.workspace = true
 
 [dev-dependencies]
 httpmock.workspace = true
 googletest.workspace = true
+finance_as_code_utils_chrono.workspace = true

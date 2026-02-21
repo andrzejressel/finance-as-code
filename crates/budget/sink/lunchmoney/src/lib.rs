@@ -147,7 +147,7 @@ impl LunchMoneySink {
 
 fn to_insert_transaction(transaction: &Transaction, account_id: i64) -> InsertTransactionDto {
     InsertTransactionDto {
-        date: transaction.date.format("%Y-%m-%d").to_string(),
+        date: transaction.date,
         amount: -*transaction.amount.amount(),
         currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
         notes: Some(transaction.description.clone()),
