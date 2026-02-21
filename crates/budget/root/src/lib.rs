@@ -1,21 +1,22 @@
+#![doc = include_str!("../../../../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-pub use finance_as_code_budget_core::FileReader;
-pub use finance_as_code_budget_core::TransactionHolder;
 use finance_as_code_budget_core::map_bank_transaction_to_transaction;
 pub use finance_as_code_budget_core::readers::LocalDirectorySource;
 pub use finance_as_code_budget_core::readers::Source;
 pub use finance_as_code_budget_core::sink::Sink;
+pub use finance_as_code_budget_core::FileReader;
+pub use finance_as_code_budget_core::TransactionHolder;
 use log::info;
 use rootcause::prelude::ResultExt;
 
 #[cfg(feature = "source_lunchflow")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "source_lunchflow", feature = "all"))))]
 pub mod lunchflow {
-    pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
-    pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfigBuilder;
     pub use finance_as_code_budget_source_lunchflow::create_lunchflow_downloader;
     pub use finance_as_code_budget_source_lunchflow::create_lunchflow_file_reader;
+    pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
+    pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfigBuilder;
 }
 
 #[cfg(feature = "source_mbank")]
@@ -27,19 +28,19 @@ pub mod mbank {
 #[cfg(feature = "sink_treeline")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_treeline", feature = "all"))))]
 pub mod treeline {
+    pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
     pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
     pub use finance_as_code_budget_sink_treeline::SinkTreelineOptionsBuilder;
-    pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
 }
 
 #[cfg(feature = "sink_lunchmoney")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
 pub mod lunchmoney {
+    pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfigBuilder;
-    pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
 }
 
 pub fn run(

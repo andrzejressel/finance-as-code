@@ -1,0 +1,180 @@
+# Finance as Code Budget
+
+This crate is the public facade for the budget pipeline. It re-exports source and sink constructors and provides a single `run()` function to orchestrate the flow.
+
+## Supported sources and sinks
+
+### Sources
+
+#### Banks
+
+| Source                             | Feature        | Supported |
+|------------------------------------|----------------|-----------|
+| [mBank CSV](https://www.mbank.pl/) | `source_mbank` | Yes       |
+
+#### Online Services
+
+| Source                               | Feature            | Supported |
+|--------------------------------------|--------------------|-----------|
+| [Lunch Flow](https://lunchflow.app/) | `source_lunchflow` | Yes       |
+
+### Sinks
+
+#### Local Applications
+
+| Sink                                | Feature         | Supported |
+|-------------------------------------|-----------------|-----------|
+| [Treeline](https://treeline.money/) | `sink_treeline` | Yes       |
+
+#### Services
+
+| Sink                                   | Feature           | Supported |
+|----------------------------------------|-------------------|-----------|
+| [Lunch Money](https://lunchmoney.app/) | `sink_lunchmoney` | Yes       |
+
+Notes:
+- For Lunchflow, keep `create_lunchflow_downloader(...)` before `LocalDirectorySource(...)` in the `sources` vector.
+- `all` enables all source/sink features.
+- `all_with_db` enables all source/sink features and `bundled_db` for Treeline.
+
+## Quick start
+
+This library is not published on crates.io yet. Add it from GitHub with the feature set you need:
+
+```toml
+[dependencies]
+finance_as_code_budget = { git = "https://github.com/andrzejressel/finance-as-code.git", features = ["all_with_db"] }
+```
+
+`all_with_db` enables all sources/sinks and bundles DuckDB for Treeline. If you have weaker PC you can try using `all` instead which uses prebuilt duckdb:
+
+```toml
+[dependencies]
+finance_as_code_budget = { git = "https://github.com/andrzejressel/finance-as-code.git", features = ["all"] }
+```
+
+In that case however you must set `DUCKDB_DOWNLOAD_LIB="1"` in your environment variables to allow downloading the duckdb library. You can automate it by creating `.cargo/config.toml` with the following content:
+
+```toml
+[env]
+DUCKDB_DOWNLOAD_LIB = "1"
+```
+
+## Quick start usage: Lunchflow -> Lunch Money
+
+```rust,no_run
+use finance_as_code_budget::{
+    LocalDirectorySource, Sink, Source,
+    lunchflow::{
+        LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
+    },
+    lunchmoney::{LunchMoneySinkConfig, create_lunchmoney_sink},
+    run,
+};
+
+fn main() -> rootcause::Result<()> {
+    let lunchflow_dir = "path/to/lunchflow/dir";
+
+    let sources: Vec<Box<dyn Source>> = vec![
+        // Keep downloader before LocalDirectorySource for Lunchflow files.
+        Box::new(create_lunchflow_downloader(
+            LunchFlowDownloaderConfig::builder()
+                .account_id(123_i64)
+                .api_key("lunchflow_api_key")
+                .local_directory(lunchflow_dir)
+                .build(),
+        )?),
+        Box::new(LocalDirectorySource::new(
+            lunchflow_dir,
+            create_lunchflow_file_reader(),
+        )?),
+    ];
+
+    let sinks: Vec<Box<dyn Sink>> = vec![Box::new(create_lunchmoney_sink(
+        LunchMoneySinkConfig::builder()
+            .api_key("lunchmoney_api_key")
+            .account_name("My Account")
+            .build(),
+    ))];
+
+    run(sources, sinks)
+}
+```
+
+## Quick start usage: mBank CSV -> Treeline + Lunch Money
+
+```rust,no_run
+use finance_as_code_budget::{
+    LocalDirectorySource, Sink, Source,
+    lunchflow::{
+        LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
+    },
+    lunchmoney::{LunchMoneySinkConfig, create_lunchmoney_sink},
+    mbank::create_mbank_file_reader,
+    run,
+    treeline::{SinkTreelineOptions, create_treeline_sink},
+};
+
+fn main() -> rootcause::Result<()> {
+    let sources: Vec<Box<dyn Source>> = vec![
+        Box::new(LocalDirectorySource::new(
+            "path/to/mbank/dir",
+            create_mbank_file_reader(),
+        )?),
+        // Keep downloader before LocalDirectorySource for Lunchflow files.
+        Box::new(create_lunchflow_downloader(
+            LunchFlowDownloaderConfig::builder()
+                .account_id(123_i64)
+                .api_key("lunchflow_api_key")
+                .local_directory("path/to/lunchflow/dir")
+                .build(),
+        )?),
+        Box::new(LocalDirectorySource::new(
+            "path/to/lunchflow/dir",
+            create_lunchflow_file_reader(),
+        )?),
+    ];
+
+    let sinks: Vec<Box<dyn Sink>> = vec![
+        Box::new(create_lunchmoney_sink(
+            LunchMoneySinkConfig::builder()
+                .api_key("lunchmoney_api_key")
+                .account_name("My Account")
+                .build(),
+        )),
+        Box::new(create_treeline_sink(
+            SinkTreelineOptions::builder()
+                .account_name("My Account")
+                .build(),
+        )),
+    ];
+
+    run(sources, sinks)
+}
+```
+
+## Quick start usage: local files only
+
+```rust,no_run
+use finance_as_code_budget::{
+    LocalDirectorySource, Sink, Source,
+    mbank::create_mbank_file_reader,
+    run,
+    treeline::{SinkTreelineOptions, create_treeline_sink},
+};
+
+fn main() -> rootcause::Result<()> {
+    let sources: Vec<Box<dyn Source>> = vec![Box::new(LocalDirectorySource::new(
+        "path/to/mbank/dir",
+        create_mbank_file_reader(),
+    )?)];
+
+    let sinks: Vec<Box<dyn Sink>> = vec![Box::new(create_treeline_sink(
+        SinkTreelineOptions::builder()
+            .account_name("My Account")
+            .build(),
+    ))];
+
+    run(sources, sinks)
+}
+```
