@@ -330,6 +330,7 @@ mod tests {
         PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
         PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
+    use finance_as_code_utils_chrono::date;
     use googletest::prelude::*;
     use httpmock::MockServer;
     use reqwest::header::{HeaderMap, HeaderValue};
@@ -557,7 +558,7 @@ mod tests {
         let response = client
             .post_transactions(&PostTransactionsRequest {
                 transactions: vec![InsertTransactionDto {
-                    date: "2024-01-01".to_string(),
+                    date: date!(2024 - 01 - 01),
                     amount: dec!(100.0000),
                     currency: Some("USD".to_string()),
                     payee: Some("Payee 1".to_string()),
