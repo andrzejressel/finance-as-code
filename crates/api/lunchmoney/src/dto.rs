@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +43,7 @@ pub struct GetTransactionsParams {
 /// A single transaction entry for `POST /transactions` (bulk insert).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct InsertTransactionDto {
-    pub date: String,
+    pub date: NaiveDate,
     pub amount: Decimal,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
