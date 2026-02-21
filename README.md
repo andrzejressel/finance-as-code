@@ -4,6 +4,8 @@ This crate is the public facade for the budget pipeline. It re-exports source an
 
 ## Supported sources and sinks
 
+Affiliate disclosure: links to Lunch Flow and Lunch Money may be affiliate links. If you use them, I may earn a commission at no extra cost to you.
+
 ### Sources
 
 #### Banks
@@ -14,9 +16,9 @@ This crate is the public facade for the budget pipeline. It re-exports source an
 
 #### Online Services
 
-| Source                               | Feature            | Supported |
-|--------------------------------------|--------------------|-----------|
-| [Lunch Flow](https://lunchflow.app/) | `source_lunchflow` | Yes       |
+| Source                                                                           | Feature            | Supported |
+|----------------------------------------------------------------------------------|--------------------|-----------|
+| [Lunch Flow](https://www.lunchflow.app/?ref=andrzej-ressel&sub1=finance-as-code) | `source_lunchflow` | Yes       |
 
 ### Sinks
 
@@ -28,9 +30,9 @@ This crate is the public facade for the budget pipeline. It re-exports source an
 
 #### Services
 
-| Sink                                   | Feature           | Supported |
-|----------------------------------------|-------------------|-----------|
-| [Lunch Money](https://lunchmoney.app/) | `sink_lunchmoney` | Yes       |
+| Sink                                                  | Feature           | Supported |
+|-------------------------------------------------------|-------------------|-----------|
+| [Lunch Money](https://lunchmoney.app/?refer=jgrrpmpw) | `sink_lunchmoney` | Yes       |
 
 Notes:
 - For Lunchflow, keep `create_lunchflow_downloader(...)` before `LocalDirectorySource(...)` in the `sources` vector.
