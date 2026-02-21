@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v just >/dev/null 2>&1; then
+  echo "pre-commit: 'just' is not installed; run 'mise install' first." >&2
+  exit 1
+fi
+
+echo "pre-commit: running just fmt"
+just fmt
+
+git add -A

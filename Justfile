@@ -5,6 +5,7 @@ install:
     rustup component add clippy
     rustup component add llvm-tools-preview
     mise install
+    git config core.hooksPath .githooks
 
 release:
     cargo build --release
