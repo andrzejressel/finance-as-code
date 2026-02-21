@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn get_all_manual_accounts_sends_request_and_parses_response() -> googletest::Result<()> {
+    fn get_all_manual_accounts_sends_request_and_parses_response() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET)
@@ -367,7 +367,7 @@ mod tests {
         let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
         let accounts = client.get_all_manual_accounts().unwrap();
 
-        verify_that!(
+        assert_that!(
             accounts,
             eq(&vec![
                 ManualAccountDto {
@@ -379,14 +379,13 @@ mod tests {
                     name: "Savings Jar".to_string(),
                 },
             ])
-        )?;
+        );
 
         mock.assert();
-        Ok(())
     }
 
     #[test]
-    fn get_all_transactions_paginates_through_all_pages() -> googletest::Result<()> {
+    fn get_all_transactions_paginates_through_all_pages() {
         let server = MockServer::start();
 
         let mock_page1 = server.mock(|when, then| {
@@ -436,22 +435,21 @@ mod tests {
             })
             .unwrap();
 
-        verify_that!(
+        assert_that!(
             transactions,
             eq(&vec![
                 tx(1, "2024-01-01", "Payee 1", None),
                 tx(2, "2024-01-02", "Payee 2", None),
                 tx(3, "2024-01-03", "Payee 3", None),
             ])
-        )?;
+        );
 
         mock_page1.assert();
         mock_page2.assert();
-        Ok(())
     }
 
     #[test]
-    fn put_transactions_sends_and_receives_correctly() -> googletest::Result<()> {
+    fn put_transactions_sends_and_receives_correctly() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::PUT)
@@ -490,19 +488,18 @@ mod tests {
             })
             .unwrap();
 
-        verify_that!(
+        assert_that!(
             response,
             eq(&PutTransactionsResponse {
                 transactions: vec![tx(1, "2024-01-01", "Payee 1", Some("Updated notes"))],
             })
-        )?;
+        );
 
         mock.assert();
-        Ok(())
     }
 
     #[test]
-    fn delete_transactions_sends_ids_to_bulk_delete_endpoint() -> googletest::Result<()> {
+    fn delete_transactions_sends_ids_to_bulk_delete_endpoint() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::DELETE)
@@ -518,11 +515,10 @@ mod tests {
             .unwrap();
 
         mock.assert();
-        Ok(())
     }
 
     #[test]
-    fn post_transactions_sends_and_receives_correctly() -> googletest::Result<()> {
+    fn post_transactions_sends_and_receives_correctly() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::POST)
@@ -572,40 +568,37 @@ mod tests {
             })
             .unwrap();
 
-        verify_that!(
+        assert_that!(
             response,
             eq(&PostTransactionsResponse {
                 transactions: vec![tx(1, "2024-01-01", "Payee 1", None)],
             })
-        )?;
+        );
 
         mock.assert();
-        Ok(())
     }
 
     #[test]
-    fn parse_retry_after_seconds_parses_header_and_uses_default_fallbacks() -> googletest::Result<()>
-    {
+    fn parse_retry_after_seconds_parses_header_and_uses_default_fallbacks() {
         let mut headers = HeaderMap::new();
         headers.insert(RETRY_AFTER, HeaderValue::from_static("17"));
-        verify_that!(parse_retry_after_seconds(&headers), eq(17))?;
+        assert_that!(parse_retry_after_seconds(&headers), eq(17));
 
         headers.insert(RETRY_AFTER, HeaderValue::from_static("not-a-number"));
-        verify_that!(
+        assert_that!(
             parse_retry_after_seconds(&headers),
             eq(DEFAULT_RETRY_AFTER_SECS)
-        )?;
+        );
 
         headers.remove(RETRY_AFTER);
-        verify_that!(
+        assert_that!(
             parse_retry_after_seconds(&headers),
             eq(DEFAULT_RETRY_AFTER_SECS)
-        )?;
-        Ok(())
+        );
     }
 
     #[test]
-    fn get_all_manual_accounts_retries_rate_limited_requests() -> googletest::Result<()> {
+    fn get_all_manual_accounts_retries_rate_limited_requests() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET)
@@ -624,12 +617,11 @@ mod tests {
         let error = client.get_all_manual_accounts().unwrap_err();
         let error_string = error.to_string();
 
-        verify_that!(
+        assert_that!(
             error_string.as_str(),
             contains_substring("GET /manual_accounts returned error: 429 Too Many Requests")
-        )?;
-        verify_that!(error_string.as_str(), contains_substring("retry-after=0"))?;
+        );
+        assert_that!(error_string.as_str(), contains_substring("retry-after=0"));
         mock.assert_calls((MAX_RATE_LIMIT_RETRIES + 1) as usize);
-        Ok(())
     }
 }
