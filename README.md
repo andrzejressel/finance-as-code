@@ -48,7 +48,7 @@ This library is not published on crates.io yet. Add it from GitHub with the feat
 finance_as_code_budget = { git = "https://github.com/andrzejressel/finance-as-code.git", features = ["all_with_db"] }
 ```
 
-`all_with_db` enables all sources/sinks and bundles DuckDB for Treeline. If you have weaker PC you can try using `all` instead which uses prebuilt duckdb:
+`all_with_db` enables all sources/sinks and bundles DuckDB for Treeline. If you have a weaker PC you can try using `all` instead which uses prebuilt duckdb:
 
 ```toml
 [dependencies]
