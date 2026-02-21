@@ -106,13 +106,14 @@ mod tests {
     use super::*;
     use crate::api::MockLunchMoneyApi;
     use crate::dto::{PostTransactionsResponse, TransactionDto};
+    use finance_as_code_utils_chrono::date;
     use mockall::Sequence;
     use rootcause::bail;
     use rust_decimal::dec;
 
     fn insert_transaction(external_id: &str) -> InsertTransactionDto {
         InsertTransactionDto {
-            date: "2024-01-01".to_string(),
+            date: date!(2024 - 01 - 01),
             amount: dec!(10.0),
             currency: Some("usd".to_string()),
             payee: Some("Counterparty".to_string()),
