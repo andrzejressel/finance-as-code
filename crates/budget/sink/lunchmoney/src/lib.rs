@@ -8,6 +8,7 @@ use finance_as_code_api_lunchmoney::upload_service::{
 };
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::sink::Sink;
+use log::info;
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
@@ -90,14 +91,29 @@ impl Sink for LunchMoneySink {
     }
 
     fn write(&self, transactions: &[Transaction]) -> Result<()> {
+        info!("Creating Lunch Money API client");
+
         let client = finance_as_code_api_lunchmoney::api::LunchMoneyClient::new(
             "https://api.lunchmoney.dev/v2".to_string(),
             self.config.api_key.value().into(),
         );
 
+        info!(
+            "Retrieving account ID for account name '{}'",
+            self.config.account_name.value()
+        );
         let account_id = Self::get_account_id_for_account_name(&self.config.account_name, &client)
             .context("failed to get account ID")?;
+        info!(
+            "Account ID for account name '{}' is {}",
+            self.config.account_name.value(),
+            account_id
+        );
 
+        info!(
+            "Getting all existing transactions for account '{}'",
+            self.config.account_name.value()
+        );
         let all_transactions = client
             .get_all_transactions(
                 &finance_as_code_api_lunchmoney::dto::GetTransactionsParams {
@@ -107,6 +123,12 @@ impl Sink for LunchMoneySink {
             )
             .context("failed to get existing transactions for account")?;
 
+        info!(
+            "Deleting {} existing transactions for account '{}'",
+            all_transactions.len(),
+            self.config.account_name.value()
+        );
+
         self.transactions_deletion_service
             .delete_transactions(&client, self.config.account_name.value(), &all_transactions)
             .context("failed to delete existing transactions")?;
@@ -115,6 +137,12 @@ impl Sink for LunchMoneySink {
             .iter()
             .map(|transaction| to_insert_transaction(transaction, account_id))
             .collect();
+
+        info!(
+            "Uploading {} transactions to account '{}'",
+            insert_transactions.len(),
+            self.config.account_name.value()
+        );
 
         self.transactions_upload_service
             .upload_transactions(

@@ -4,9 +4,6 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
-[features]
-duckdb-bundled = ["duckdb/bundled"]
-
 [dependencies]
 bon.workspace = true
 finance_as_code_budget_core.workspace = true

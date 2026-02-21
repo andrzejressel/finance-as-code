@@ -6,12 +6,13 @@ edition = "2024"
 [features]
 source_lunchflow = ["dep:finance_as_code_budget_source_lunchflow"]
 source_mbank = ["dep:finance_as_code_budget_source_mbank"]
-sink_treeline = ["__sink_treeline__nonbundled_duckdb", "finance_as_code_budget_sink_treeline/duckdb-bundled"]
-__sink_treeline__nonbundled_duckdb = ["dep:finance_as_code_budget_sink_treeline"]
+sink_treeline = ["dep:finance_as_code_budget_sink_treeline"]
 sink_lunchmoney = ["dep:finance_as_code_budget_sink_lunchmoney"]
 
-__all_nonbundled_duckdb = ["__sink_treeline__nonbundled_duckdb", "sink_lunchmoney", "source_lunchflow", "source_mbank"]
-all = ["__all_nonbundled_duckdb", "sink_treeline"]
+all = ["sink_lunchmoney", "source_lunchflow", "source_mbank", "sink_treeline"]
+
+bundled_db = ["dep:duckdb"]
+all_with_db = ["all", "bundled_db"]
 
 [dependencies]
 finance_as_code_budget_core.workspace = true
@@ -19,6 +20,7 @@ finance_as_code_budget_source_lunchflow = { workspace = true, optional = true }
 finance_as_code_budget_source_mbank = { workspace = true, optional = true }
 finance_as_code_budget_sink_treeline = { workspace = true, optional = true }
 finance_as_code_budget_sink_lunchmoney = { workspace = true, optional = true }
+duckdb = { workspace = true, optional = true, features = ["bundled"] }
 rootcause.workspace = true
 colog.workspace = true
 log.workspace = true
