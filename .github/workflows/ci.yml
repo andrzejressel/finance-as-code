@@ -45,6 +45,14 @@ jobs:
         run: just check
       - name: Test
         run: just test
+      - name: Fix DuckDB library path for macOS coverage
+        if: runner.os == 'macOS'
+        run: |
+          DUCKDB_LIB=$(find target/duckdb-download -name "libduckdb.dylib" | head -1)
+          if [ -n "$DUCKDB_LIB" ]; then
+            mkdir -p target/llvm-cov-target/debug
+            cp "$DUCKDB_LIB" target/llvm-cov-target/debug/libduckdb.dylib
+          fi
       - name: Test with coverage
         run: just test-coverage
       - name: Upload coverage data to codecov
