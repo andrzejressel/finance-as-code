@@ -9,7 +9,7 @@ pub use finance_as_code_budget_core::sink::Sink;
 use log::info;
 use rootcause::prelude::ResultExt;
 
-#[cfg(feature="source_lunchflow")]
+#[cfg(feature = "source_lunchflow")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "source_lunchflow", feature = "all"))))]
 pub mod lunchflow {
     pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
