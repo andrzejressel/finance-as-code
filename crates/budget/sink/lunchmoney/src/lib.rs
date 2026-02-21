@@ -1,16 +1,16 @@
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
-use finance_as_code_api_lunchmoney::dto::{
-    DeleteTransactionsRequest, InsertTransactionDto, PostTransactionsRequest,
+use finance_as_code_api_lunchmoney::dto::{DeleteTransactionsRequest, InsertTransactionDto};
+use finance_as_code_api_lunchmoney::upload_service::{
+    DefaultLunchMoneyTransactionsUploadService, LunchMoneyTransactionsUploadService,
 };
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::sink::Sink;
-use log::{info, warn};
+use log::info;
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
 
 const MAX_TRANSACTIONS_PER_DELETE_REQUEST: usize = 500;
-const MAX_TRANSACTIONS_PER_INSERT_REQUEST: usize = 50;
 
 #[derive(Clone, Debug)]
 pub struct LunchMoneyApiKey(String);
@@ -72,10 +72,14 @@ pub struct LunchMoneySinkConfig {
 
 pub struct LunchMoneySink {
     config: LunchMoneySinkConfig,
+    transactions_upload_service: Box<dyn LunchMoneyTransactionsUploadService>,
 }
 
 pub fn create_lunchmoney_sink(config: LunchMoneySinkConfig) -> impl Sink {
-    LunchMoneySink { config }
+    LunchMoneySink {
+        config,
+        transactions_upload_service: Box::new(DefaultLunchMoneyTransactionsUploadService),
+    }
 }
 
 impl Sink for LunchMoneySink {
@@ -151,103 +155,24 @@ impl Sink for LunchMoneySink {
             );
         }
 
-        if transactions.is_empty() {
-            info!(
-                "No transactions to add to Lunch Money account '{}'; skipping insert",
-                self.config.account_name.value()
-            );
-            return Ok(());
-        }
+        let insert_transactions: Vec<_> = transactions
+            .iter()
+            .map(|transaction| to_insert_transaction(transaction, account_id))
+            .collect();
 
-        info!(
-            "Adding '{}' transactions to Lunch Money account '{}'",
-            transactions.len(),
-            self.config.account_name.value()
-        );
-
-        let transactions = transactions.to_vec();
-        let total_transactions_to_insert = transactions.len();
-        let total_insert_chunks =
-            total_transactions_to_insert.div_ceil(MAX_TRANSACTIONS_PER_INSERT_REQUEST);
-        let mut inserted_transactions = 0;
-
-        for (chunk_index, chunk) in transactions
-            .chunks(MAX_TRANSACTIONS_PER_INSERT_REQUEST)
-            .enumerate()
-        {
-            let chunk_size = chunk.len();
-            let transactions = chunk
-                .iter()
-                .map(|transaction| Self::to_insert_transaction(transaction, account_id))
-                .collect();
-
-            let r = client
-                .post_transactions(&PostTransactionsRequest { transactions })
-                .context("failed to post transactions to Lunch Money")
-                .context_with(|| format!("Failed chunk: {:?}", chunk));
-
-            // https://discord.com/channels/842337014556262411/1134594318414389258/1474122871784869968
-            if r.is_err() {
-                info!(
-                    "Insert chunk {}/{} failed ({} transactions); retrying one by one for account '{}'",
-                    chunk_index + 1,
-                    total_insert_chunks,
-                    chunk_size,
-                    self.config.account_name.value()
-                );
-
-                warn!("Error inserting chunk: {:?}", r.err());
-
-                for transaction in chunk {
-                    client
-                        .post_transactions(&PostTransactionsRequest {
-                            transactions: vec![Self::to_insert_transaction(
-                                transaction,
-                                account_id,
-                            )],
-                        })
-                        .context("failed to post transaction to Lunch Money")
-                        .context_with(|| format!("Failed transaction: {:?}", transaction))?;
-
-                    inserted_transactions += 1;
-                    info!(
-                        "Inserted retried transaction; processed {}/{} transactions for account '{}'",
-                        inserted_transactions,
-                        total_transactions_to_insert,
-                        self.config.account_name.value()
-                    );
-                }
-            } else {
-                inserted_transactions += chunk_size;
-                info!(
-                    "Inserted chunk {}/{} ({} transactions); processed {}/{} transactions for account '{}'",
-                    chunk_index + 1,
-                    total_insert_chunks,
-                    chunk_size,
-                    inserted_transactions,
-                    total_transactions_to_insert,
-                    self.config.account_name.value()
-                );
-            }
-        }
+        self.transactions_upload_service
+            .upload_transactions(
+                &client,
+                self.config.account_name.value(),
+                &insert_transactions,
+            )
+            .context("failed to upload transactions to Lunch Money")?;
 
         Ok(())
     }
 }
 
 impl LunchMoneySink {
-    fn to_insert_transaction(transaction: &Transaction, account_id: i64) -> InsertTransactionDto {
-        InsertTransactionDto {
-            date: transaction.date.format("%Y-%m-%d").to_string(),
-            amount: -*transaction.amount.amount(),
-            currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
-            notes: Some(transaction.description.clone()),
-            payee: Some(transaction.counterparty.clone()),
-            manual_account_id: Some(account_id),
-            external_id: Some(transaction.id.to_string()),
-        }
-    }
-
     fn get_account_id_for_account_name(
         account_name: &LunchMoneyAccountName,
         api_client: &impl LunchMoneyApi,
@@ -261,6 +186,18 @@ impl LunchMoneySink {
             .find(|manual_account| manual_account.name == account_name.value())
             .map(|manual_account| manual_account.id)
             .context_with(|| format!("Account with name '{}' not found", account_name.value()))?)
+    }
+}
+
+fn to_insert_transaction(transaction: &Transaction, account_id: i64) -> InsertTransactionDto {
+    InsertTransactionDto {
+        date: transaction.date.format("%Y-%m-%d").to_string(),
+        amount: -*transaction.amount.amount(),
+        currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
+        notes: Some(transaction.description.clone()),
+        payee: Some(transaction.counterparty.clone()),
+        manual_account_id: Some(account_id),
+        external_id: Some(transaction.id.to_string()),
     }
 }
 
