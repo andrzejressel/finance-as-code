@@ -41,6 +41,8 @@ jobs:
       - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
       - name: Install
         run: just install
+      - name: Check
+        run: just check
       - name: Test
         run: just test
 #      - name: Test
@@ -56,6 +58,8 @@ jobs:
 #        with:
 #          files: target/nextest/default/junit.xml
 #          fail_ci_if_error: true
+      - name: Format
+        run: just fmt
       - run: git add . && git diff
       - run: git diff --cached
       - name: Ensure no files have changed
