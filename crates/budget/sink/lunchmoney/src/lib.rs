@@ -216,7 +216,6 @@ impl Sink for LunchMoneySink {
                         total_transactions_to_insert,
                         self.config.account_name.value()
                     );
-
                 }
             } else {
                 inserted_transactions += chunk_size;
