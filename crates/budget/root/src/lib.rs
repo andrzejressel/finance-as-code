@@ -13,6 +13,7 @@ use rootcause::prelude::ResultExt;
 #[cfg_attr(docsrs, doc(cfg(any(feature = "source_lunchflow", feature = "all"))))]
 pub mod lunchflow {
     pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
+    pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfigBuilder;
     pub use finance_as_code_budget_source_lunchflow::create_lunchflow_downloader;
     pub use finance_as_code_budget_source_lunchflow::create_lunchflow_file_reader;
 }
@@ -27,6 +28,7 @@ pub mod mbank {
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_treeline", feature = "all"))))]
 pub mod treeline {
     pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
+    pub use finance_as_code_budget_sink_treeline::SinkTreelineOptionsBuilder;
     pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
 }
 
@@ -36,6 +38,7 @@ pub mod lunchmoney {
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfigBuilder;
     pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
 }
 
