@@ -1,5 +1,7 @@
 pub mod api;
+pub mod deletion_service;
 pub mod dto;
+pub mod upload_service;
 
 /// Bearer token used to authenticate against the Lunch Money v2 API.
 #[derive(Debug, Clone)]
