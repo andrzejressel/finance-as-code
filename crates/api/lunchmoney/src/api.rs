@@ -325,12 +325,12 @@ impl LunchMoneyApi for LunchMoneyClient {
 mod tests {
     use super::*;
     use crate::ApiKey;
-    use finance_as_code_utils_chrono::date;
     use crate::dto::{
         DeleteTransactionsRequest, GetTransactionsParams, InsertTransactionDto, ManualAccountDto,
         PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
         PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
+    use finance_as_code_utils_chrono::date;
     use googletest::prelude::*;
     use httpmock::MockServer;
     use reqwest::header::{HeaderMap, HeaderValue};
