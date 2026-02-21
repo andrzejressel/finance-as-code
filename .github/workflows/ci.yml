@@ -49,10 +49,15 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           DUCKDB_LIB=$(find target/duckdb-download -name "libduckdb.dylib" | head -1)
-          if [ -n "$DUCKDB_LIB" ]; then
-            mkdir -p target/llvm-cov-target/debug
-            cp "$DUCKDB_LIB" target/llvm-cov-target/debug/libduckdb.dylib
+          if [ -z "$DUCKDB_LIB" ]; then
+            echo "Error: libduckdb.dylib not found in target/duckdb-download"
+            echo "Available files:"
+            find target/duckdb-download -type f 2>/dev/null || echo "target/duckdb-download directory not found"
+            exit 1
           fi
+          mkdir -p target/llvm-cov-target/debug
+          cp "$DUCKDB_LIB" target/llvm-cov-target/debug/libduckdb.dylib
+          echo "Successfully copied $DUCKDB_LIB to target/llvm-cov-target/debug/libduckdb.dylib"
       - name: Test with coverage
         run: just test-coverage
       - name: Upload coverage data to codecov
