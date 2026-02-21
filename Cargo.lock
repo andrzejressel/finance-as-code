@@ -1229,6 +1229,7 @@ name = "finance_as_code_budget"
 version = "0.1.0"
 dependencies = [
  "colog",
+ "duckdb",
  "finance_as_code_budget_core",
  "finance_as_code_budget_sink_lunchmoney",
  "finance_as_code_budget_sink_treeline",

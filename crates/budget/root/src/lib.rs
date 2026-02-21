@@ -6,25 +6,32 @@ use finance_as_code_budget_core::map_bank_transaction_to_transaction;
 pub use finance_as_code_budget_core::readers::LocalDirectorySource;
 pub use finance_as_code_budget_core::readers::Source;
 pub use finance_as_code_budget_core::sink::Sink;
-#[cfg(feature = "source_mbank")]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "source_mbank", feature = "all"))))]
-pub use finance_as_code_budget_source_mbank::create_mbank_file_reader;
 use log::info;
 use rootcause::prelude::ResultExt;
 
-#[cfg(feature = "source_lunchflow")]
-pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
-#[cfg(feature = "source_lunchflow")]
-pub use finance_as_code_budget_source_lunchflow::create_lunchflow_downloader;
-#[cfg(feature = "source_lunchflow")]
-pub use finance_as_code_budget_source_lunchflow::create_lunchflow_file_reader;
+#[cfg(feature="source_lunchflow")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "source_lunchflow", feature = "all"))))]
+pub mod lunchflow {
+    pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
+    pub use finance_as_code_budget_source_lunchflow::create_lunchflow_downloader;
+    pub use finance_as_code_budget_source_lunchflow::create_lunchflow_file_reader;
+}
 
-#[cfg(feature = "__sink_treeline__nonbundled_duckdb")]
-pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
-#[cfg(feature = "__sink_treeline__nonbundled_duckdb")]
-pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
+#[cfg(feature = "source_mbank")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "source_mbank", feature = "all"))))]
+pub mod mbank {
+    pub use finance_as_code_budget_source_mbank::create_mbank_file_reader;
+}
+
+#[cfg(feature = "sink_treeline")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "sink_treeline", feature = "all"))))]
+pub mod treeline {
+    pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
+    pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
+}
 
 #[cfg(feature = "sink_lunchmoney")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
 pub mod lunchmoney {
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
