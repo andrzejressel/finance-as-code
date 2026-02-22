@@ -34,6 +34,6 @@ fn main() {
 
     let sinks = vec![create_sink()];
 
-    run(sources, sinks).expect("Pipeline run failed");
+    run(sources, vec![], sinks).expect("Pipeline run failed");
 }
 ```

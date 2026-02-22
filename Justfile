@@ -10,7 +10,7 @@ release:
     cargo build --release
 
 check:
-    cargo fmt -- --check
+    cargo +nightly fmt -- --check
     cargo clippy --tests
 
 fmt:
