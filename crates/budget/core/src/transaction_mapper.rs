@@ -128,8 +128,8 @@ mod tests {
     }
 
     mod map_bank_transaction_to_transaction {
-        use crate::BankTransaction;
         use crate::transaction_mapper::map_bank_transaction_to_transaction;
+        use crate::{BankTransaction, Transaction};
         use googletest::assert_that;
         use googletest::prelude::eq;
         use iso::USD;
@@ -157,18 +157,31 @@ mod tests {
             ];
 
             let transactions = map_bank_transaction_to_transaction(bank_txs).unwrap();
-            assert_that!(transactions.len(), eq(2));
+            assert_eq!(transactions.len(), 2);
+            assert_ne!(transactions[0].id, transactions[1].id);
             assert_that!(
-                transactions[0].id,
-                eq(Uuid::from_str("ef3d18c2-d126-5b14-8161-bd5cafef5814").unwrap())
+                transactions,
+                eq(&vec![
+                    Transaction {
+                        id: Uuid::from_str("ef3d18c2-d126-5b14-8161-bd5cafef5814").unwrap(),
+                        date: Default::default(),
+                        description: "Tx".to_string(),
+                        counterparty: "".to_string(),
+                        amount: Money::from_major(100, USD),
+                        other_side_account_number: None,
+                        tags: Default::default()
+                    },
+                    Transaction {
+                        id: Uuid::from_str("79f38cd8-91f6-526b-966b-2910027698b6").unwrap(),
+                        date: Default::default(),
+                        description: "Tx".to_string(),
+                        counterparty: "".to_string(),
+                        amount: Money::from_major(100, USD),
+                        other_side_account_number: None,
+                        tags: Default::default()
+                    },
+                ])
             );
-            assert_that!(
-                transactions[1].id,
-                eq(Uuid::from_str("79f38cd8-91f6-526b-966b-2910027698b6").unwrap())
-            );
-            assert_that!(transactions[0].id == transactions[1].id, eq(false));
-            assert_that!(transactions[0].tags.len(), eq(0));
-            assert_that!(transactions[1].tags.len(), eq(0));
         }
     }
 }

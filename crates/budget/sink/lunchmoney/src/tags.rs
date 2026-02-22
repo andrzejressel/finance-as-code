@@ -12,7 +12,7 @@ impl LunchMoneyTags for TagMap {
     }
 
     fn get_category_name(&self) -> Option<&String> {
-        self.get(CATEGORY_NAME_KEY)
+        self.get(&CATEGORY_NAME_KEY.to_string())
     }
 }
 
