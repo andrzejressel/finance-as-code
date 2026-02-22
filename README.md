@@ -92,7 +92,7 @@ fn main() {
                 .local_directory(lunchflow_dir)
                 .build(),
         )
-        .expect("Failed to create Lunchflow downloader")),
+        .expect("Failed to create Lunch Flow downloader")),
         Box::new(LocalDirectorySource::new(
             lunchflow_dir,
             create_lunchflow_file_reader(),

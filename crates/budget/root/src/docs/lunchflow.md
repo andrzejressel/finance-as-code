@@ -1,6 +1,6 @@
-# Lunchflow quick start
+# Lunch Flow quick start
 
-Use this source when you want to download transactions from Lunchflow and feed them into the pipeline.
+Use this source when you want to download transactions from Lunch Flow and feed them into the pipeline.
 
 The downloader writes a JSON file to the local directory as a side effect, so it must run before `LocalDirectorySource`.
 
@@ -24,7 +24,7 @@ fn main() {
                 .local_directory(lunchflow_dir)
                 .build(),
         )
-        .expect("Failed to create Lunchflow downloader")),
+        .expect("Failed to create Lunch Flow downloader")),
         Box::new(LocalDirectorySource::new(
             lunchflow_dir,
             create_lunchflow_file_reader(),
