@@ -7,8 +7,17 @@ use finance_as_code_budget_core::map_bank_transaction_to_transaction;
 pub use finance_as_code_budget_core::readers::LocalDirectorySource;
 pub use finance_as_code_budget_core::readers::Source;
 pub use finance_as_code_budget_core::sink::Sink;
+use finance_as_code_budget_core::transformer::Transformer;
 use log::info;
 use rootcause::prelude::ResultExt;
+
+pub use finance_as_code_budget_core::BankTransaction;
+pub use finance_as_code_budget_core::Transaction;
+
+pub mod transformer {
+    pub use finance_as_code_budget_core::transformer::Transformer;
+    pub use finance_as_code_budget_core::transformer::create_single_transaction_transformer;
+}
 
 #[cfg(feature = "source_lunchflow")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "source_lunchflow", feature = "all"))))]
@@ -47,7 +56,7 @@ pub mod lunchmoney {
 
 pub fn run(
     sources: Vec<Box<dyn Source>>,
-    // transformers: Vec<Box<dyn Transformer>>,
+    _transformers: Vec<Box<dyn Transformer>>,
     sinks: Vec<Box<dyn Sink>>,
 ) -> rootcause::Result<()> {
     colog::init();

@@ -22,6 +22,6 @@ fn main() {
             .build(),
     ))];
 
-    run(sources, sinks).expect("Pipeline run failed");
+    run(sources, vec![], sinks).expect("Pipeline run failed");
 }
 ```

@@ -2,6 +2,7 @@ set windows-shell := ["pwsh.exe", "-c"]
 
 install:
     rustup component add rustfmt
+    rustup +nightly component add rustfmt
     rustup component add clippy
     rustup component add llvm-tools-preview
     mise install
@@ -10,11 +11,11 @@ release:
     cargo build --release
 
 check:
-    cargo fmt -- --check
+    cargo +nightly fmt -- --check
     cargo clippy --tests
 
 fmt:
-    cargo fmt
+    cargo +nightly fmt
     cargo clippy --tests --fix --allow-dirty --allow-staged
 
 test:

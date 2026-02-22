@@ -13,7 +13,8 @@ pub fn map_bank_transaction_to_transaction(
     let mut counters = HashMap::new();
 
     for bank_tx in bank_txs {
-        // Additional entropy for the transaction made in the same day, in the same place for the same amount
+        // Additional entropy for the transaction made in the same day, in the same
+        // place for the same amount
         let counter = counters.entry(bank_tx.description.clone()).or_insert(0);
         *counter += 1;
 

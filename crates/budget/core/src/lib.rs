@@ -4,6 +4,7 @@ pub mod sink;
 mod transaction_mapper;
 mod transactions_holder;
 pub type TagMap = HMap<String>;
+pub mod transformer;
 
 use crate::model::join_non_empty;
 use bon::Builder;

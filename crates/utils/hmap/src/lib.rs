@@ -16,6 +16,8 @@ use std::hash::Hash;
 ///
 /// # Examples
 ///
+/// Basic usage:
+///
 /// ```
 /// use finance_as_code_utils_hmap::HMap;
 ///
@@ -33,6 +35,22 @@ use std::hash::Hash;
 /// assert_eq!(map.get::<String>(&Key::Name).map(String::as_str), Some("Alice"));
 /// assert_eq!(map.get::<i64>(&Key::Age), Some(&30));
 /// assert_eq!(map.get::<String>(&Key::City), None);
+/// ```
+///
+/// Requesting the wrong type for an existing key panics:
+///
+/// ```should_panic
+/// use finance_as_code_utils_hmap::HMap;
+///
+/// #[derive(Debug, PartialEq, Eq, Hash)]
+/// enum Key {
+///     Age,
+/// }
+///
+/// let mut map = HMap::new();
+/// map.insert(Key::Age, 30_i64);
+///
+/// let _ = map.get::<String>(&Key::Age);
 /// ```
 #[derive(PartialEq)]
 pub struct HMap<K: Eq + Hash> {
