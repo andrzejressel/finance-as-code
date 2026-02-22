@@ -1,6 +1,6 @@
-use std::any::{type_name, Any};
-use std::collections::hash_map::Entry;
+use std::any::{Any, type_name};
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
