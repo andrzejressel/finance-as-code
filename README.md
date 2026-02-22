@@ -62,7 +62,7 @@ In that case however you must set `DUCKDB_DOWNLOAD_LIB="1"` in your environment 
 DUCKDB_DOWNLOAD_LIB = "1"
 ```
 
-## Quick start usage: Lunchflow -> Lunch Money
+## Quick start usage: Lunch Flow -> Lunch Money
 
 ```rust,no_run
 use finance_as_code_budget::{
@@ -78,7 +78,7 @@ fn main() -> rootcause::Result<()> {
     let lunchflow_dir = "path/to/lunchflow/dir";
 
     let sources: Vec<Box<dyn Source>> = vec![
-        // Keep downloader before LocalDirectorySource for Lunchflow files.
+        // Keep downloader before LocalDirectorySource for Lunch Flow files.
         Box::new(create_lunchflow_downloader(
             LunchFlowDownloaderConfig::builder()
                 .account_id(123_i64)
