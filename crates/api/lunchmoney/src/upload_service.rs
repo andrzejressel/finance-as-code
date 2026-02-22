@@ -117,6 +117,7 @@ mod tests {
             amount: dec!(10.0),
             currency: Some("usd".to_string()),
             payee: Some("Counterparty".to_string()),
+            category_id: None,
             notes: Some("Description".to_string()),
             manual_account_id: Some(2),
             external_id: Some(external_id.to_string()),

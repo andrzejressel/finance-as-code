@@ -588,6 +588,7 @@ mod tests {
                             "amount": "100.0000",
                             "currency": "USD",
                             "payee": "Payee 1",
+                            "category_id": 501,
                             "manual_account_id": 7,
                             "external_id": "external_1"
                         }
@@ -618,6 +619,7 @@ mod tests {
                     amount: dec!(100.0000),
                     currency: Some("USD".to_string()),
                     payee: Some("Payee 1".to_string()),
+                    category_id: Some(501),
                     notes: None,
                     manual_account_id: Some(7),
                     external_id: Some("external_1".to_string()),
