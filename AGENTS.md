@@ -38,6 +38,14 @@ This forces DuckDB to download its native library at build time rather than link
 
 After making changes, run `just fmt` to format and fix lints, then `just test` to run the full test suite (including doc tests). Both must pass before considering work done.
 
+## Testing Style
+
+- Prefer `googletest` matchers (`assert_that!`) over `assert_eq!` / boolean assertions in Rust tests.
+- For `Option` assertions, use matchers like `none()` / `some(...)` instead of `is_none()` or `is_some()` comparisons (for example, use `assert_that!(value, none())`, not `assert_that!(value.is_none(), eq(true))`).
+- Keep matcher style consistent within a test module unless there is a clear reason to mix styles.
+
+More detailed matcher conventions live in `TESTING_GUIDELINES.md`.
+
 ## Project Structure
 
 This is a Cargo workspace. All Rust crates live under `crates/` and infrastructure code under `setup/`.
@@ -57,7 +65,8 @@ finance-as-code/
 │   │       ├── lunchflow/   # Source: downloads and parses Lunchflow API transactions
 │   │       └── mbank/       # Source: parses mBank CSV exports (Windows-1250 encoding)
 │   └── utils/
-│       └── chrono/          # Utility macros: date!() and datetime!() literals
+│       ├── chrono/          # Utility macros: date!() and datetime!() literals
+│       └── hmap/            # Utility runtime heterogeneous map (Any-backed)
 └── setup/
     └── github/              # Pulumi IaC: manages GitHub repo settings (branch protection, labels)
 ```
