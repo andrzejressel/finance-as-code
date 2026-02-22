@@ -62,15 +62,15 @@ pub struct LunchFlowDownloaderConfig {
     /// API key for Lunch Flow REST API. Can be created in [Destinations](https://www.lunchflow.app/destinations)
     pub(crate) api_key: LunchFlowApiKey,
     #[builder(into)]
-    /// Local directory where downloaded JSON data will be stored. When reading these files using
-    /// `LocalDirectorySource::new(...)`, pass the same path so the reader can find the downloaded
-    /// files.
+    /// Local directory where downloaded JSON data will be stored. When reading
+    /// these files using `LocalDirectorySource::new(...)`, pass the same
+    /// path so the reader can find the downloaded files.
     pub(crate) local_directory: PathBuf,
 }
 
-/// [Source] that does not actually read anything - it triggers download of the file from the Lunchflow API
-/// When used it should be first source, so the actual [create_lunchflow_file_reader] will read
-/// new file.
+/// [Source] that does not actually read anything - it triggers download of the
+/// file from the Lunchflow API When used it should be first source, so the
+/// actual [create_lunchflow_file_reader] will read new file.
 pub fn create_lunchflow_downloader(config: LunchFlowDownloaderConfig) -> Result<impl Source> {
     let api = RealLunchFlowApi::new(
         "https://www.lunchflow.app/api/v1".to_string(),

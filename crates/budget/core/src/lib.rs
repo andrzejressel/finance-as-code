@@ -3,6 +3,7 @@ pub mod readers;
 pub mod sink;
 mod transaction_mapper;
 mod transactions_holder;
+pub mod transformer;
 
 use bon::Builder;
 use chrono::NaiveDate;

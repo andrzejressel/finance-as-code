@@ -35,7 +35,8 @@ pub struct GetTransactionsParams {
     /// Maximum number of transactions to return (1–2000, default 1000).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
-    /// Offset into the result set; used for pagination together with `has_more`.
+    /// Offset into the result set; used for pagination together with
+    /// `has_more`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<u32>,
 }
@@ -71,8 +72,8 @@ pub struct PostTransactionsResponse {
 
 /// A single transaction update entry for `PUT /transactions`.
 ///
-/// Only `Some` fields are serialised and sent to the API; `None` fields are omitted.
-/// `id` must identify an existing transaction.
+/// Only `Some` fields are serialised and sent to the API; `None` fields are
+/// omitted. `id` must identify an existing transaction.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UpdateTransactionDto {
     pub id: i64,

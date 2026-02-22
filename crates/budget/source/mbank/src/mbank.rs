@@ -10,7 +10,8 @@ use rust_decimal::{Decimal, dec};
 use rusty_money::{Money, iso};
 use std::str::FromStr;
 
-/// Parses Polish currency format (e.g., "-1 234,56" or "3,57") and returns only the numeric value.
+/// Parses Polish currency format (e.g., "-1 234,56" or "3,57") and returns only
+/// the numeric value.
 // Function to parse amount
 fn parse_amount(amount_str: &str) -> Result<Decimal> {
     let trimmed = amount_str.trim();
@@ -20,8 +21,8 @@ fn parse_amount(amount_str: &str) -> Result<Decimal> {
     }
 
     // Format: "-2,72" or "14,27" or "1 234,56"
-    // Sometimes it might have currency suffix " PLN" (though usually separate column or header)
-    // The previous implementation handled spaces and commas.
+    // Sometimes it might have currency suffix " PLN" (though usually separate
+    // column or header) The previous implementation handled spaces and commas.
 
     // Remove spaces and replace comma with dot for parsing
     let normalized = trimmed.replace(' ', "").replace(',', "."); // Handle non-breaking space

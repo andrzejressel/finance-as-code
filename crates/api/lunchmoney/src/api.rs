@@ -28,14 +28,16 @@ struct ManualAccountsResponse {
 
 /// Abstraction over the Lunch Money v2 `/transactions` endpoints.
 ///
-/// A `MockLunchMoneyApi` is generated automatically in test builds via `mockall`.
+/// A `MockLunchMoneyApi` is generated automatically in test builds via
+/// `mockall`.
 #[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait LunchMoneyApi {
     /// Fetch all manual accounts (`GET /manual_accounts`).
     fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>>;
 
-    /// Fetch every matching transaction, following `has_more` / `offset` pagination
-    /// automatically until the full result set has been retrieved.
+    /// Fetch every matching transaction, following `has_more` / `offset`
+    /// pagination automatically until the full result set has been
+    /// retrieved.
     fn get_all_transactions(&self, params: &GetTransactionsParams) -> Result<Vec<TransactionDto>>;
 
     /// Update up to 500 transactions in a single call (`PUT /transactions`).

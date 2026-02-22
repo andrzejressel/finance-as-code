@@ -14,7 +14,7 @@ check:
     cargo clippy --tests
 
 fmt:
-    cargo fmt
+    cargo +nightly fmt
     cargo clippy --tests --fix --allow-dirty --allow-staged
 
 test:
