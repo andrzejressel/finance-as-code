@@ -921,4 +921,63 @@ mod tests {
 
         mock.assert();
     }
+
+    #[test]
+    fn get_all_categories_handles_missing_children_field() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .query_param("format", "nested");
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "categories": [
+                        {
+                            "id": 42,
+                            "name": "Food",
+                            "description": null,
+                            "is_income": false,
+                            "exclude_from_budget": false,
+                            "exclude_from_totals": false,
+                            "updated_at": "2025-02-28T09:49:03.225Z",
+                            "created_at": "2025-01-28T09:49:03.225Z",
+                            "is_group": false,
+                            "group_id": null,
+                            "archived": false,
+                            "archived_at": null,
+                            "order": 0,
+                            "collapsed": false
+                        }
+                    ]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let categories = client.get_all_categories().unwrap();
+
+        assert_that!(
+            categories,
+            eq(&vec![CategoryDto {
+                id: 42,
+                name: "Food".to_string(),
+                description: None,
+                is_income: false,
+                exclude_from_budget: false,
+                exclude_from_totals: false,
+                updated_at: dt("2025-02-28T09:49:03.225Z"),
+                created_at: dt("2025-01-28T09:49:03.225Z"),
+                is_group: false,
+                group_id: None,
+                children: vec![],
+                archived: false,
+                archived_at: None,
+                order: Some(0),
+                collapsed: false,
+            }])
+        );
+
+        mock.assert();
+    }
 }
