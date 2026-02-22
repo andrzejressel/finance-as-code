@@ -26,6 +26,7 @@ pub fn map_bank_transaction_to_transaction(
             counterparty: bank_tx.counterparty,
             amount: bank_tx.amount,
             other_side_account_number: bank_tx.other_side_account_number,
+            tags: Default::default(),
         };
         transactions.push(transaction);
     }
@@ -37,7 +38,7 @@ pub fn map_bank_transaction_to_transaction(
 
 fn verify_unique_ids(transactions: &[Transaction]) -> Result<()> {
     let sorted_transactions = {
-        let mut sorted = transactions.to_vec();
+        let mut sorted = Vec::from_iter(transactions);
         sorted.sort_by_key(|t| t.id);
         sorted
     };
@@ -85,6 +86,7 @@ mod tests {
                     counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
+                    tags: Default::default(),
                 },
                 Transaction {
                     id: Uuid::new_v4(),
@@ -93,6 +95,7 @@ mod tests {
                     counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
+                    tags: Default::default(),
                 },
             ];
             assert!(verify_unique_ids(&transactions).is_ok());
@@ -109,6 +112,7 @@ mod tests {
                     counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
+                    tags: Default::default(),
                 },
                 Transaction {
                     id: duplicate_id,
@@ -117,6 +121,7 @@ mod tests {
                     counterparty: "".to_string(),
                     amount: Money::from_major(100, USD),
                     other_side_account_number: None,
+                    tags: Default::default(),
                 },
             ];
             assert!(verify_unique_ids(&transactions).is_err());
@@ -164,7 +169,8 @@ mod tests {
                         description: "Tx".to_string(),
                         counterparty: "".to_string(),
                         amount: Money::from_major(100, USD),
-                        other_side_account_number: None
+                        other_side_account_number: None,
+                        tags: Default::default()
                     },
                     Transaction {
                         id: Uuid::from_str("79f38cd8-91f6-526b-966b-2910027698b6").unwrap(),
@@ -172,7 +178,8 @@ mod tests {
                         description: "Tx".to_string(),
                         counterparty: "".to_string(),
                         amount: Money::from_major(100, USD),
-                        other_side_account_number: None
+                        other_side_account_number: None,
+                        tags: Default::default()
                     },
                 ])
             );
