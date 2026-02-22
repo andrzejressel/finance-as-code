@@ -92,6 +92,8 @@ pub struct InsertTransactionDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payee: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manual_account_id: Option<i64>,
