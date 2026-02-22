@@ -37,7 +37,7 @@ pub fn map_bank_transaction_to_transaction(
 
 fn verify_unique_ids(transactions: &[Transaction]) -> Result<()> {
     let sorted_transactions = {
-        let mut sorted = transactions.iter().collect::<Vec<_>>();
+        let mut sorted = Vec::from_iter(transactions);
         sorted.sort_by_key(|t| t.id);
         sorted
     };
