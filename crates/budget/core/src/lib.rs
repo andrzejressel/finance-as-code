@@ -104,6 +104,8 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    /// Not all Banks support splitting description and counterparty, so this method joins them
+    /// into a single string for easier matching in transformers.
     pub fn get_full_description(&self) -> String {
         join_non_empty(
             &[self.description.as_str(), self.counterparty.as_str()],
