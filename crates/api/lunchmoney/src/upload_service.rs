@@ -126,7 +126,7 @@ mod tests {
     fn posted_transaction(id: i64) -> TransactionDto {
         TransactionDto {
             id,
-            date: "2024-01-01".to_string(),
+            date: date!(2024 - 01 - 01),
             amount: dec!(10.0),
             currency: "USD".to_string(),
             payee: "Counterparty".to_string(),

@@ -1,7 +1,8 @@
 use crate::ApiKey;
 use crate::dto::{
-    DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto, PostTransactionsRequest,
-    PostTransactionsResponse, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
+    CategoryDto, DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto,
+    PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
+    PutTransactionsResponse, TransactionDto,
 };
 use log::warn;
 use reqwest::StatusCode;
@@ -26,6 +27,12 @@ struct ManualAccountsResponse {
     manual_accounts: Vec<ManualAccountDto>,
 }
 
+/// Response envelope for `GET /categories`.
+#[derive(serde::Deserialize)]
+struct CategoriesResponse {
+    categories: Vec<CategoryDto>,
+}
+
 /// Abstraction over the Lunch Money v2 `/transactions` endpoints.
 ///
 /// A `MockLunchMoneyApi` is generated automatically in test builds via
@@ -34,6 +41,9 @@ struct ManualAccountsResponse {
 pub trait LunchMoneyApi {
     /// Fetch all manual accounts (`GET /manual_accounts`).
     fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>>;
+
+    /// Fetch all categories in nested format (`GET /categories?format=nested`).
+    fn get_all_categories(&self) -> Result<Vec<CategoryDto>>;
 
     /// Fetch every matching transaction, following `has_more` / `offset`
     /// pagination automatically until the full result set has been
@@ -199,8 +209,8 @@ impl LunchMoneyApi for LunchMoneyClient {
 
         loop {
             let page_params = GetTransactionsParams {
-                start_date: params.start_date.clone(),
-                end_date: params.end_date.clone(),
+                start_date: params.start_date,
+                end_date: params.end_date,
                 manual_account_id: params.manual_account_id,
                 limit: Some(limit),
                 offset: Some(offset),
@@ -217,6 +227,40 @@ impl LunchMoneyApi for LunchMoneyClient {
         }
 
         Ok(all_transactions)
+    }
+
+    fn get_all_categories(&self) -> Result<Vec<CategoryDto>> {
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .get(format!("{}/categories", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .query(&[("format", "nested")])
+            },
+            "GET /categories",
+        )?;
+
+        if response.status().is_success() {
+            Ok(response
+                .json::<CategoriesResponse>()
+                .context("Failed to deserialize GET /categories response")?
+                .categories)
+        } else {
+            let status = response.status();
+            let headers = format_headers(response.headers());
+            let body = response.text().context_with(|| {
+                format!(
+                    "Failed to read error body from GET /categories (status {})",
+                    status
+                )
+            })?;
+            bail!(
+                "GET /categories returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
+        }
     }
 
     fn put_transactions(
@@ -328,10 +372,11 @@ mod tests {
     use super::*;
     use crate::ApiKey;
     use crate::dto::{
-        DeleteTransactionsRequest, GetTransactionsParams, InsertTransactionDto, ManualAccountDto,
-        PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
-        PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
+        CategoryDto, ChildCategoryDto, DeleteTransactionsRequest, GetTransactionsParams,
+        InsertTransactionDto, ManualAccountDto, PostTransactionsRequest, PostTransactionsResponse,
+        PutTransactionsRequest, PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
+    use chrono::{DateTime, FixedOffset};
     use finance_as_code_utils_chrono::date;
     use googletest::prelude::*;
     use httpmock::MockServer;
@@ -339,15 +384,19 @@ mod tests {
     use rust_decimal::dec;
     use serde_json::json;
 
-    fn tx(id: i64, date: &str, payee: &str, notes: Option<&str>) -> TransactionDto {
+    fn tx(id: i64, date: chrono::NaiveDate, payee: &str, notes: Option<&str>) -> TransactionDto {
         TransactionDto {
             id,
-            date: date.to_string(),
+            date,
             amount: dec!(100.0000),
             currency: "USD".to_string(),
             payee: payee.to_string(),
             notes: notes.map(str::to_string),
         }
+    }
+
+    fn dt(value: &str) -> DateTime<FixedOffset> {
+        DateTime::parse_from_rfc3339(value).unwrap()
     }
 
     #[test]
@@ -441,9 +490,9 @@ mod tests {
         assert_that!(
             transactions,
             eq(&vec![
-                tx(1, "2024-01-01", "Payee 1", None),
-                tx(2, "2024-01-02", "Payee 2", None),
-                tx(3, "2024-01-03", "Payee 3", None),
+                tx(1, date!(2024 - 01 - 01), "Payee 1", None),
+                tx(2, date!(2024 - 01 - 02), "Payee 2", None),
+                tx(3, date!(2024 - 01 - 03), "Payee 3", None),
             ])
         );
 
@@ -494,7 +543,12 @@ mod tests {
         assert_that!(
             response,
             eq(&PutTransactionsResponse {
-                transactions: vec![tx(1, "2024-01-01", "Payee 1", Some("Updated notes"))],
+                transactions: vec![tx(
+                    1,
+                    date!(2024 - 01 - 01),
+                    "Payee 1",
+                    Some("Updated notes")
+                )],
             })
         );
 
@@ -574,7 +628,7 @@ mod tests {
         assert_that!(
             response,
             eq(&PostTransactionsResponse {
-                transactions: vec![tx(1, "2024-01-01", "Payee 1", None)],
+                transactions: vec![tx(1, date!(2024 - 01 - 01), "Payee 1", None)],
             })
         );
 
@@ -626,5 +680,243 @@ mod tests {
         );
         assert_that!(error_string.as_str(), contains_substring("retry-after=0"));
         mock.assert_calls((MAX_RATE_LIMIT_RETRIES + 1) as usize);
+    }
+
+    #[test]
+    fn get_all_categories_returns_nested_categories() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .query_param("format", "nested");
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "categories": [
+                        {
+                            "id": 86,
+                            "name": "Automobile",
+                            "description": "Auto related categories",
+                            "is_income": false,
+                            "exclude_from_budget": false,
+                            "exclude_from_totals": false,
+                            "updated_at": "2025-02-28T09:49:03.238Z",
+                            "created_at": "2025-01-28T09:49:03.238Z",
+                            "is_group": true,
+                            "group_id": null,
+                            "children": [
+                                {
+                                    "id": 315174,
+                                    "name": "Fuel",
+                                    "description": "Fuel and gas expenses",
+                                    "is_income": false,
+                                    "exclude_from_budget": false,
+                                    "exclude_from_totals": false,
+                                    "updated_at": "2025-02-28T09:49:03.238Z",
+                                    "created_at": "2025-01-28T09:49:03.238Z",
+                                    "is_group": false,
+                                    "group_id": 86,
+                                    "archived": false,
+                                    "archived_at": null,
+                                    "order": 1,
+                                    "collapsed": false
+                                }
+                            ],
+                            "archived": false,
+                            "archived_at": null,
+                            "order": 2,
+                            "collapsed": false
+                        },
+                        {
+                            "id": 83,
+                            "name": "Rent",
+                            "description": "Monthly Rent",
+                            "is_income": false,
+                            "exclude_from_budget": false,
+                            "exclude_from_totals": false,
+                            "updated_at": "2025-02-28T09:49:03.225Z",
+                            "created_at": "2025-01-28T09:49:03.225Z",
+                            "is_group": false,
+                            "group_id": null,
+                            "children": [],
+                            "archived": false,
+                            "archived_at": null,
+                            "order": 0,
+                            "collapsed": false
+                        }
+                    ]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let categories = client.get_all_categories().unwrap();
+
+        assert_that!(
+            categories,
+            eq(&vec![
+                CategoryDto {
+                    id: 86,
+                    name: "Automobile".to_string(),
+                    description: Some("Auto related categories".to_string()),
+                    is_income: false,
+                    exclude_from_budget: false,
+                    exclude_from_totals: false,
+                    updated_at: dt("2025-02-28T09:49:03.238Z"),
+                    created_at: dt("2025-01-28T09:49:03.238Z"),
+                    is_group: true,
+                    group_id: None,
+                    children: vec![ChildCategoryDto {
+                        id: 315174,
+                        name: "Fuel".to_string(),
+                        description: Some("Fuel and gas expenses".to_string()),
+                        is_income: false,
+                        exclude_from_budget: false,
+                        exclude_from_totals: false,
+                        updated_at: dt("2025-02-28T09:49:03.238Z"),
+                        created_at: dt("2025-01-28T09:49:03.238Z"),
+                        is_group: false,
+                        group_id: Some(86),
+                        archived: false,
+                        archived_at: None,
+                        order: Some(1),
+                        collapsed: false,
+                    }],
+                    archived: false,
+                    archived_at: None,
+                    order: Some(2),
+                    collapsed: false,
+                },
+                CategoryDto {
+                    id: 83,
+                    name: "Rent".to_string(),
+                    description: Some("Monthly Rent".to_string()),
+                    is_income: false,
+                    exclude_from_budget: false,
+                    exclude_from_totals: false,
+                    updated_at: dt("2025-02-28T09:49:03.225Z"),
+                    created_at: dt("2025-01-28T09:49:03.225Z"),
+                    is_group: false,
+                    group_id: None,
+                    children: vec![],
+                    archived: false,
+                    archived_at: None,
+                    order: Some(0),
+                    collapsed: false,
+                }
+            ])
+        );
+
+        mock.assert();
+    }
+
+    #[test]
+    fn get_all_categories_preserves_timezone_offsets() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .query_param("format", "nested");
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "categories": [
+                        {
+                            "id": 1,
+                            "name": "Timezone Test",
+                            "description": null,
+                            "is_income": false,
+                            "exclude_from_budget": false,
+                            "exclude_from_totals": false,
+                            "updated_at": "2025-06-15T10:00:00+00:00",
+                            "created_at": "2025-01-01T15:30:00+05:30",
+                            "is_group": true,
+                            "group_id": null,
+                            "children": [
+                                {
+                                    "id": 2,
+                                    "name": "Child",
+                                    "description": null,
+                                    "is_income": false,
+                                    "exclude_from_budget": false,
+                                    "exclude_from_totals": false,
+                                    "updated_at": "2025-04-20T18:00:00+09:00",
+                                    "created_at": "2025-04-19T08:15:00-04:00",
+                                    "is_group": false,
+                                    "group_id": 1,
+                                    "archived": true,
+                                    "archived_at": "2025-03-10T08:45:00-03:00",
+                                    "order": null,
+                                    "collapsed": false
+                                }
+                            ],
+                            "archived": false,
+                            "archived_at": null,
+                            "order": null,
+                            "collapsed": true
+                        }
+                    ]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let categories = client.get_all_categories().unwrap();
+
+        assert_that!(categories[0].updated_at.offset().local_minus_utc(), eq(0));
+        assert_that!(
+            categories[0].created_at.offset().local_minus_utc(),
+            eq(5 * 3600 + 30 * 60)
+        );
+        assert_that!(
+            categories[0].children[0]
+                .updated_at
+                .offset()
+                .local_minus_utc(),
+            eq(9 * 3600)
+        );
+        assert_that!(
+            categories[0].children[0]
+                .archived_at
+                .as_ref()
+                .unwrap()
+                .offset()
+                .local_minus_utc(),
+            eq(-(3 * 3600))
+        );
+
+        mock.assert();
+    }
+
+    #[test]
+    fn get_all_categories_returns_error_on_failure() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .query_param("format", "nested");
+            then.status(401)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "message": "Unauthorized"
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let error = client.get_all_categories().unwrap_err();
+        let error_string = error.to_string();
+
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("GET /categories returned error: 401 Unauthorized")
+        );
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("content-type=application/json")
+        );
+        assert_that!(error_string.as_str(), contains_substring("Unauthorized"));
+
+        mock.assert();
     }
 }
