@@ -1,4 +1,5 @@
 pub mod api;
+pub mod category_service;
 pub mod deletion_service;
 pub mod dto;
 pub mod upload_service;
