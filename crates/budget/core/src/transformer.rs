@@ -43,6 +43,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TagMap;
     use chrono::NaiveDate;
     use googletest::assert_that;
     use googletest::prelude::eq;
@@ -69,6 +70,7 @@ mod tests {
                 counterparty: "Budget System".to_string(),
                 amount: Money::from_major(1, USD),
                 other_side_account_number: None,
+                tags: TagMap::new(),
             };
 
             vec![tx, generated_tx]
@@ -81,6 +83,7 @@ mod tests {
             counterparty: "Local Shop".to_string(),
             amount: Money::from_major(25, USD),
             other_side_account_number: None,
+            tags: TagMap::new(),
         };
 
         let result = transformer.transform(tx);
