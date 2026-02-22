@@ -28,10 +28,27 @@ impl LunchMoneyCategoriesService for DefaultLunchMoneyCategoriesService {
         let mut category_name_to_id = HashMap::new();
 
         for category in categories {
-            category_name_to_id.insert(category.name.clone(), category.id);
+            if let Some(existing_id) =
+                category_name_to_id.insert(category.name.clone(), category.id)
+            {
+                rootcause::bail!(
+                    "duplicate Lunch Money category name '{}' for ids {} and {}",
+                    category.name,
+                    existing_id,
+                    category.id
+                );
+            }
 
             for child in category.children {
-                category_name_to_id.insert(child.name, child.id);
+                if let Some(existing_id) = category_name_to_id.insert(child.name.clone(), child.id)
+                {
+                    rootcause::bail!(
+                        "duplicate Lunch Money category name '{}' for ids {} and {}",
+                        child.name,
+                        existing_id,
+                        child.id
+                    );
+                }
             }
         }
 
@@ -140,6 +157,62 @@ mod tests {
         assert_that!(
             error.to_string(),
             contains_substring("failed to fetch Lunch Money categories")
+        );
+    }
+
+    #[test]
+    fn get_category_name_to_id_map_returns_error_when_category_names_are_duplicated() {
+        let mut api_client = MockLunchMoneyApi::new();
+        api_client
+            .expect_get_all_categories()
+            .times(1)
+            .return_once(|| {
+                Ok(vec![
+                    CategoryDto {
+                        id: 83,
+                        name: "Rent".to_string(),
+                        description: Some("Monthly Rent".to_string()),
+                        is_income: false,
+                        exclude_from_budget: false,
+                        exclude_from_totals: false,
+                        updated_at: dt("2025-02-28T09:49:03.225Z"),
+                        created_at: dt("2025-01-28T09:49:03.225Z"),
+                        is_group: false,
+                        group_id: None,
+                        children: vec![],
+                        archived: false,
+                        archived_at: None,
+                        order: Some(0),
+                        collapsed: false,
+                    },
+                    CategoryDto {
+                        id: 84,
+                        name: "Rent".to_string(),
+                        description: Some("Second Rent".to_string()),
+                        is_income: false,
+                        exclude_from_budget: false,
+                        exclude_from_totals: false,
+                        updated_at: dt("2025-02-28T09:49:03.225Z"),
+                        created_at: dt("2025-01-28T09:49:03.225Z"),
+                        is_group: false,
+                        group_id: None,
+                        children: vec![],
+                        archived: false,
+                        archived_at: None,
+                        order: Some(1),
+                        collapsed: false,
+                    },
+                ])
+            });
+
+        let service = DefaultLunchMoneyCategoriesService;
+        let error = service
+            .get_category_name_to_id_map(&api_client)
+            .unwrap_err();
+
+        assert_that!(
+            error.to_string(),
+            contains_substring("duplicate Lunch Money category name 'Rent'")
         );
     }
 }
