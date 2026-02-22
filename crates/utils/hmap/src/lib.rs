@@ -56,7 +56,8 @@ where
         }
 
         self.values
-            .insert(key, Box::new(value)).map(|old| old.downcast::<T>().unwrap())
+            .insert(key, Box::new(value))
+            .map(|old| old.downcast::<T>().unwrap())
             .map(|old| *old)
     }
 
@@ -96,7 +97,8 @@ where
         }
 
         self.values
-            .remove(key).map(|value| value.downcast::<T>().unwrap())
+            .remove(key)
+            .map(|value| value.downcast::<T>().unwrap())
             .map(|value| *value)
     }
 
