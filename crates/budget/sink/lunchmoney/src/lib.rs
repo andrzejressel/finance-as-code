@@ -1,3 +1,5 @@
+mod tags;
+
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
 use finance_as_code_api_lunchmoney::deletion_service::{
     DefaultLunchMoneyTransactionsDeletionService, LunchMoneyTransactionsDeletionService,
@@ -12,6 +14,8 @@ use log::info;
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
+
+pub use tags::LunchMoneyTags;
 
 #[derive(Clone, Debug)]
 pub struct LunchMoneyApiKey(String);
