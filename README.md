@@ -1,5 +1,7 @@
 # Finance as Code Budget
 
+[![Rust Docs](https://img.shields.io/badge/docs-rust-blue?logo=rust)](https://finance-as-code.readthedocs.io/en/latest/)
+
 Finance as Code is a personal finance automation project that moves transactions from different inputs into budgeting destinations in a repeatable, code-driven way.
 
 Goal: define your data flow once, then run it reliably to keep your tools in sync.
@@ -109,17 +111,37 @@ fn main() {
 }
 ```
 
-## Quick start usage: Treeline sink
+## Quick start usage: Lunch Flow -> Treeline
 
 ```rust,no_run
 use finance_as_code_budget::{
-    Sink, run,
+    LocalDirectorySource, Sink, Source,
+    lunchflow::{
+        LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
+    },
     treeline::{SinkTreelineOptions, create_treeline_sink},
+    run,
 };
-# use finance_as_code_budget::__private::create_source;
 
 fn main() {
-    let sources = vec![create_source()];
+    let lunchflow_dir = "path/to/lunchflow/dir";
+
+    let sources: Vec<Box<dyn Source>> = vec![
+        // Keep downloader before LocalDirectorySource for Lunch Flow files.
+        Box::new(create_lunchflow_downloader(
+            LunchFlowDownloaderConfig::builder()
+                .account_id(123_i64)
+                .api_key("lunchflow_api_key")
+                .local_directory(lunchflow_dir)
+                .build(),
+        )
+        .expect("Failed to create Lunchflow downloader")),
+        Box::new(LocalDirectorySource::new(
+            lunchflow_dir,
+            create_lunchflow_file_reader(),
+        )
+        .expect("Failed to create local directory source")),
+    ];
 
     let sinks: Vec<Box<dyn Sink>> = vec![Box::new(create_treeline_sink(
         SinkTreelineOptions::builder()

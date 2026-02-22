@@ -56,10 +56,13 @@ impl From<&str> for LunchFlowApiKey {
 #[derive(bon::Builder, Debug, Clone)]
 pub struct LunchFlowDownloaderConfig {
     #[builder(into)]
+    /// Account ID in Lunch Flow to download transactions from. Can be found in URL when clicking on account in [account view](https://www.lunchflow.app/accounts) or [connections view](https://www.lunchflow.app/connections)
     pub(crate) account_id: LunchFlowAccountId,
     #[builder(into)]
+    /// API key for Lunch Flow REST API. Can be created in [Destinations](https://www.lunchflow.app/destinations)
     pub(crate) api_key: LunchFlowApiKey,
     #[builder(into)]
+    /// Local directory where downloaded data will be stored. Must be the same as the one used in [create_lunchflow_file_reader] if used together, so the reader can read downloaded files.
     pub(crate) local_directory: PathBuf,
 }
 

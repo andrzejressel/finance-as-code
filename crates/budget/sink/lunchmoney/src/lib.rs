@@ -66,8 +66,10 @@ impl From<&str> for LunchMoneyAccountName {
 #[derive(bon::Builder, Clone, Debug)]
 pub struct LunchMoneySinkConfig {
     #[builder(into)]
+    /// Lunch Money API key generated in the Lunch Money app <https://my.lunchmoney.app/developers>
     pub(crate) api_key: LunchMoneyApiKey,
     #[builder(into)]
+    /// Account name in Lunch Money. Can be found in [`Setup -> Accounts`](https://my.lunchmoney.app/accounts)
     pub(crate) account_name: LunchMoneyAccountName,
 }
 

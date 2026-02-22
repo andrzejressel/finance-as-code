@@ -13,6 +13,7 @@ mod utils;
 #[derive(bon::Builder)]
 pub struct SinkTreelineOptions {
     #[builder(into)]
+    /// Account name in Treeline to which transactions will be added. Existing transactions will be removed.
     account_name: String,
 }
 
