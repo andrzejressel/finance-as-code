@@ -13,6 +13,8 @@ mod utils;
 #[derive(bon::Builder)]
 pub struct SinkTreelineOptions {
     #[builder(into)]
+    /// Account name in Treeline whose data will be fully replaced: existing transactions and balances
+    /// will be cleared and replaced with the provided transactions before balances are regenerated.
     account_name: String,
 }
 

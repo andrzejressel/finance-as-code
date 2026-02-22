@@ -1,6 +1,12 @@
 # Finance as Code Budget
 
-This crate is the public facade for the budget pipeline. It re-exports source and sink constructors and provides a single `run()` function to orchestrate the flow.
+[![Rust Docs](https://img.shields.io/badge/docs-rust-blue?logo=rust)](https://finance-as-code.readthedocs.io/en/latest/)
+
+Finance as Code is a personal finance automation project that moves transactions from different inputs into budgeting destinations in a repeatable, code-driven way.
+
+Goal: define your data flow once, then run it reliably to keep your tools in sync.
+
+Sources are where transactions come from (for example bank CSV exports or online APIs). Sinks are where normalized transactions are written (for example local apps or external services).
 
 ## Supported sources and sinks
 
@@ -74,7 +80,7 @@ use finance_as_code_budget::{
     run,
 };
 
-fn main() -> rootcause::Result<()> {
+fn main() {
     let lunchflow_dir = "path/to/lunchflow/dir";
 
     let sources: Vec<Box<dyn Source>> = vec![
@@ -85,11 +91,13 @@ fn main() -> rootcause::Result<()> {
                 .api_key("lunchflow_api_key")
                 .local_directory(lunchflow_dir)
                 .build(),
-        )?),
+        )
+        .expect("Failed to create Lunch Flow downloader")),
         Box::new(LocalDirectorySource::new(
             lunchflow_dir,
             create_lunchflow_file_reader(),
-        )?),
+        )
+        .expect("Failed to create local directory source")),
     ];
 
     let sinks: Vec<Box<dyn Sink>> = vec![Box::new(create_lunchmoney_sink(
@@ -99,11 +107,11 @@ fn main() -> rootcause::Result<()> {
             .build(),
     ))];
 
-    run(sources, sinks)
+    run(sources, sinks).expect("Pipeline run failed");
 }
 ```
 
-## Quick start usage: mBank CSV -> Treeline + Lunch Money
+## Quick start usage: Lunch Flow -> Treeline
 
 ```rust,no_run
 use finance_as_code_budget::{
@@ -111,72 +119,47 @@ use finance_as_code_budget::{
     lunchflow::{
         LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
     },
-    lunchmoney::{LunchMoneySinkConfig, create_lunchmoney_sink},
-    mbank::create_mbank_file_reader,
-    run,
     treeline::{SinkTreelineOptions, create_treeline_sink},
+    run,
 };
 
-fn main() -> rootcause::Result<()> {
+fn main() {
+    let lunchflow_dir = "path/to/lunchflow/dir";
+
     let sources: Vec<Box<dyn Source>> = vec![
-        Box::new(LocalDirectorySource::new(
-            "path/to/mbank/dir",
-            create_mbank_file_reader(),
-        )?),
         // Keep downloader before LocalDirectorySource for Lunch Flow files.
         Box::new(create_lunchflow_downloader(
             LunchFlowDownloaderConfig::builder()
                 .account_id(123_i64)
                 .api_key("lunchflow_api_key")
-                .local_directory("path/to/lunchflow/dir")
+                .local_directory(lunchflow_dir)
                 .build(),
-        )?),
+        )
+        .expect("Failed to create Lunch Flow downloader")),
         Box::new(LocalDirectorySource::new(
-            "path/to/lunchflow/dir",
+            lunchflow_dir,
             create_lunchflow_file_reader(),
-        )?),
+        )
+        .expect("Failed to create local directory source")),
     ];
-
-    let sinks: Vec<Box<dyn Sink>> = vec![
-        Box::new(create_lunchmoney_sink(
-            LunchMoneySinkConfig::builder()
-                .api_key("lunchmoney_api_key")
-                .account_name("My Account")
-                .build(),
-        )),
-        Box::new(create_treeline_sink(
-            SinkTreelineOptions::builder()
-                .account_name("My Account")
-                .build(),
-        )),
-    ];
-
-    run(sources, sinks)
-}
-```
-
-## Quick start usage: local files only
-
-```rust,no_run
-use finance_as_code_budget::{
-    LocalDirectorySource, Sink, Source,
-    mbank::create_mbank_file_reader,
-    run,
-    treeline::{SinkTreelineOptions, create_treeline_sink},
-};
-
-fn main() -> rootcause::Result<()> {
-    let sources: Vec<Box<dyn Source>> = vec![Box::new(LocalDirectorySource::new(
-        "path/to/mbank/dir",
-        create_mbank_file_reader(),
-    )?)];
 
     let sinks: Vec<Box<dyn Sink>> = vec![Box::new(create_treeline_sink(
         SinkTreelineOptions::builder()
-            .account_name("My Account")
+            .account_name("My Treeline Account")
             .build(),
     ))];
 
-    run(sources, sinks)
+    run(sources, sinks).expect("Pipeline run failed");
 }
 ```
+
+The Treeline sink performs a full replacement for the selected account (existing
+transactions and balances for that account are removed before import).
+
+## How `LocalDirectorySource` works
+
+`LocalDirectorySource` is the file-based source in the pipeline. You point it to a folder and provide a matching file reader, and it imports supported transaction files from that folder.
+
+- Use `create_mbank_file_reader()` for mBank CSV exports.
+- Use `create_lunchflow_file_reader()` for Lunch Flow JSON files.
+- In Lunch Flow flows, run the downloader first so it saves files locally, then use `LocalDirectorySource` to import them.
