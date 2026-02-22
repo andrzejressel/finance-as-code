@@ -9,6 +9,7 @@ pub use finance_as_code_budget_core::run;
 pub use finance_as_code_budget_core::sink::Sink;
 
 pub use finance_as_code_budget_core::BankTransaction;
+pub use finance_as_code_budget_core::TagMap;
 pub use finance_as_code_budget_core::Transaction;
 
 pub mod transformer {
