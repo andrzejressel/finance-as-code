@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{DateTime, FixedOffset, NaiveDate};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -6,11 +6,52 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransactionDto {
     pub id: i64,
-    pub date: String,
+    pub date: NaiveDate,
     pub amount: Decimal,
     pub currency: String,
     pub payee: String,
     pub notes: Option<String>,
+}
+
+/// Child category nested inside a category group, as returned by
+/// `GET /categories?format=nested`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ChildCategoryDto {
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_income: bool,
+    pub exclude_from_budget: bool,
+    pub exclude_from_totals: bool,
+    pub updated_at: DateTime<FixedOffset>,
+    pub created_at: DateTime<FixedOffset>,
+    pub is_group: bool,
+    pub group_id: Option<i64>,
+    pub archived: bool,
+    pub archived_at: Option<DateTime<FixedOffset>>,
+    pub order: Option<i64>,
+    pub collapsed: bool,
+}
+
+/// Top-level category (group or standalone), as returned by
+/// `GET /categories?format=nested`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CategoryDto {
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_income: bool,
+    pub exclude_from_budget: bool,
+    pub exclude_from_totals: bool,
+    pub updated_at: DateTime<FixedOffset>,
+    pub created_at: DateTime<FixedOffset>,
+    pub is_group: bool,
+    pub group_id: Option<i64>,
+    pub children: Vec<ChildCategoryDto>,
+    pub archived: bool,
+    pub archived_at: Option<DateTime<FixedOffset>>,
+    pub order: Option<i64>,
+    pub collapsed: bool,
 }
 
 /// Manual account as returned by `GET /manual_accounts`.
@@ -26,9 +67,9 @@ pub struct ManualAccountDto {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct GetTransactionsParams {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_date: Option<String>,
+    pub start_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub end_date: Option<String>,
+    pub end_date: Option<NaiveDate>,
     /// Filter transactions by manual account id.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manual_account_id: Option<i64>,
@@ -78,7 +119,7 @@ pub struct PostTransactionsResponse {
 pub struct UpdateTransactionDto {
     pub id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub date: Option<String>,
+    pub date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]

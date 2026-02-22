@@ -75,13 +75,14 @@ impl LunchMoneyTransactionsDeletionService for DefaultLunchMoneyTransactionsDele
 mod tests {
     use super::*;
     use crate::api::MockLunchMoneyApi;
+    use finance_as_code_utils_chrono::date;
     use mockall::Sequence;
     use rust_decimal::dec;
 
     fn transaction(id: i64) -> TransactionDto {
         TransactionDto {
             id,
-            date: "2024-01-01".to_string(),
+            date: date!(2024 - 01 - 01),
             amount: dec!(10.0),
             currency: "USD".to_string(),
             payee: "Counterparty".to_string(),
