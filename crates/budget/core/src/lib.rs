@@ -75,68 +75,6 @@ fn apply_transformers(
     transactions
 }
 
-#[cfg(test)]
-mod tests {
-    use super::apply_transformers;
-    use super::Transaction;
-    use crate::transformer::Transformer;
-
-    struct FilterAllTransformer;
-
-    impl Transformer for FilterAllTransformer {
-        fn name(&self) -> &str {
-            "filter_all"
-        }
-
-        fn transform(&self, _transaction: Transaction) -> Vec<Transaction> {
-            Vec::new()
-        }
-    }
-
-    struct SplitTransformer;
-
-    impl Transformer for SplitTransformer {
-        fn name(&self) -> &str {
-            "split"
-        }
-
-        fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
-            // Return multiple transactions for a single input to verify expansion behavior.
-            vec![transaction.clone(), transaction]
-        }
-    }
-
-    #[test]
-    fn apply_transformers_with_no_transformers_is_noop() {
-        let original: Vec<Transaction> = vec![Transaction::default(), Transaction::default()];
-        let transformers: Vec<Box<dyn Transformer>> = Vec::new();
-
-        let result = apply_transformers(original.clone(), &transformers);
-
-        assert_eq!(result, original);
-    }
-
-    #[test]
-    fn apply_transformers_with_filtering_transformer_drops_all_transactions() {
-        let original: Vec<Transaction> = vec![Transaction::default(), Transaction::default()];
-        let transformers: Vec<Box<dyn Transformer>> = vec![Box::new(FilterAllTransformer)];
-
-        let result = apply_transformers(original, &transformers);
-
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn apply_transformers_with_split_transformer_expands_transactions() {
-        let original: Vec<Transaction> = vec![Transaction::default()];
-        let transformers: Vec<Box<dyn Transformer>> = vec![Box::new(SplitTransformer)];
-
-        let result = apply_transformers(original, &transformers);
-
-        // One input transaction should be expanded into two output transactions.
-        assert_eq!(result.len(), 2);
-    }
-}
 #[derive(Builder, Clone, Debug, Serialize, PartialEq, Hash)]
 pub struct BankTransaction {
     #[builder(into)]
@@ -221,6 +159,8 @@ mod tests {
     use rusty_money::iso::USD;
     use uuid::Uuid;
 
+    use super::apply_transformers;
+
     #[test]
     fn get_full_description_joins_description_and_counterparty() {
         let tx = Transaction {
@@ -280,5 +220,51 @@ mod tests {
 
         assert_that!(result.len(), eq(1));
         assert_that!(result[0].description.as_str(), eq("base-first-second"));
+    }
+
+    #[test]
+    fn apply_transformers_applies_following_transformers_to_split_transactions() {
+        let split_transformer: Box<dyn transformer::Transformer> = Box::new(
+            transformer::create_single_transaction_transformer("split", |mut tx| {
+                let split_part = Transaction {
+                    id: Uuid::parse_str("9cedf634-840a-443d-9b51-95a36cd3bc6a").unwrap(),
+                    date: tx.date,
+                    description: format!("{}-part-2", tx.description),
+                    counterparty: tx.counterparty.clone(),
+                    amount: Money::from_major(4, USD),
+                    other_side_account_number: None,
+                    tags: HMap::new(),
+                };
+                tx.description = format!("{}-part-1", tx.description);
+                tx.amount = Money::from_major(6, USD);
+
+                vec![tx, split_part]
+            }),
+        );
+        let normalize_transformer: Box<dyn transformer::Transformer> = Box::new(
+            transformer::create_single_transaction_transformer("normalize", |mut tx| {
+                tx.description = format!("{}-normalized", tx.description);
+                vec![tx]
+            }),
+        );
+
+        let transaction = Transaction {
+            id: Uuid::parse_str("7ea48a4b-6f97-4607-a298-15fcf5549df4").unwrap(),
+            date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
+            description: "base".to_string(),
+            counterparty: "Shop".to_string(),
+            amount: Money::from_major(10, USD),
+            other_side_account_number: None,
+            tags: HMap::new(),
+        };
+
+        let result = apply_transformers(
+            vec![transaction],
+            &[split_transformer, normalize_transformer],
+        );
+
+        assert_that!(result.len(), eq(2));
+        assert_that!(result[0].description.as_str(), eq("base-part-1-normalized"));
+        assert_that!(result[1].description.as_str(), eq("base-part-2-normalized"));
     }
 }

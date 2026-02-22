@@ -33,4 +33,10 @@ mod tests {
         tags.set_category_name(category_name.clone());
         assert_that!(tags.get_category_name(), some(eq(&category_name)));
     }
+
+    #[test]
+    fn test_get_category_name_uninitialized() {
+        let tags = TagMap::new();
+        assert_that!(tags.get_category_name(), none());
+    }
 }
