@@ -29,7 +29,7 @@ pub struct BankTransaction {
     pub other_side_account_number: Option<NonEmptyString>, // TODO: Make it a struct
 }
 
-#[derive(Builder, Debug)]
+#[derive(Builder, Debug, PartialEq)]
 pub struct Transaction {
     pub id: uuid::Uuid,
     #[builder(into)]
