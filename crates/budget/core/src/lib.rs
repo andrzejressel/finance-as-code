@@ -75,6 +75,68 @@ fn apply_transformers(
     transactions
 }
 
+#[cfg(test)]
+mod tests {
+    use super::apply_transformers;
+    use super::Transaction;
+    use crate::transformer::Transformer;
+
+    struct FilterAllTransformer;
+
+    impl Transformer for FilterAllTransformer {
+        fn name(&self) -> &str {
+            "filter_all"
+        }
+
+        fn transform(&self, _transaction: Transaction) -> Vec<Transaction> {
+            Vec::new()
+        }
+    }
+
+    struct SplitTransformer;
+
+    impl Transformer for SplitTransformer {
+        fn name(&self) -> &str {
+            "split"
+        }
+
+        fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
+            // Return multiple transactions for a single input to verify expansion behavior.
+            vec![transaction.clone(), transaction]
+        }
+    }
+
+    #[test]
+    fn apply_transformers_with_no_transformers_is_noop() {
+        let original: Vec<Transaction> = vec![Transaction::default(), Transaction::default()];
+        let transformers: Vec<Box<dyn Transformer>> = Vec::new();
+
+        let result = apply_transformers(original.clone(), &transformers);
+
+        assert_eq!(result, original);
+    }
+
+    #[test]
+    fn apply_transformers_with_filtering_transformer_drops_all_transactions() {
+        let original: Vec<Transaction> = vec![Transaction::default(), Transaction::default()];
+        let transformers: Vec<Box<dyn Transformer>> = vec![Box::new(FilterAllTransformer)];
+
+        let result = apply_transformers(original, &transformers);
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn apply_transformers_with_split_transformer_expands_transactions() {
+        let original: Vec<Transaction> = vec![Transaction::default()];
+        let transformers: Vec<Box<dyn Transformer>> = vec![Box::new(SplitTransformer)];
+
+        let result = apply_transformers(original, &transformers);
+
+        // One input transaction should be expanded into two output transactions.
+        assert_eq!(result.len(), 2);
+    }
+}
 #[derive(Builder, Clone, Debug, Serialize, PartialEq, Hash)]
 pub struct BankTransaction {
     #[builder(into)]
