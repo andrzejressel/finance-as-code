@@ -21,6 +21,3 @@ finance_as_code_budget_source_mbank = { workspace = true, optional = true }
 finance_as_code_budget_sink_treeline = { workspace = true, optional = true }
 finance_as_code_budget_sink_lunchmoney = { workspace = true, optional = true }
 duckdb = { workspace = true, optional = true, features = ["bundled"] }
-rootcause.workspace = true
-colog.workspace = true
-log.workspace = true

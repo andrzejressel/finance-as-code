@@ -14,11 +14,11 @@ uuid.workspace = true
 natord.workspace = true
 mockall.workspace = true
 log.workspace = true
+colog.workspace = true
 itertools.workspace = true
 finance_as_code_utils_hmap.workspace = true
 
 [dev-dependencies]
-insta.workspace = true
 mockall.workspace = true
 finance_as_code_utils_chrono.workspace = true
 googletest.workspace = true
