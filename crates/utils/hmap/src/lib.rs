@@ -1,5 +1,6 @@
 use std::any::{Any, type_name};
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
 /// Heterogeneous map with typed accessors.
@@ -51,14 +52,16 @@ where
     where
         T: 'static,
     {
-        if let Some(existing) = self.values.get(&key) {
-            assert_type_match::<T>(existing.as_ref(), "insert");
+        match self.values.entry(key) {
+            Entry::Occupied(mut entry) => {
+                assert_type_match::<T>(entry.get().as_ref(), "insert");
+                Some(*entry.insert(Box::new(value)).downcast::<T>().unwrap())
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(Box::new(value));
+                None
+            }
         }
-
-        self.values
-            .insert(key, Box::new(value))
-            .map(|old| old.downcast::<T>().unwrap())
-            .map(|old| *old)
     }
 
     #[must_use]
@@ -163,9 +166,9 @@ mod tests {
 
         assert_that!(
             map.get::<String>(&Key::Name).map(String::as_str),
-            eq(Some("Alice"))
+            some(eq("Alice"))
         );
-        assert_that!(map.get::<i64>(&Key::Age), eq(Some(&30)));
+        assert_that!(map.get::<i64>(&Key::Age), some(eq(&30)));
         assert_that!(map.len(), eq(2));
     }
 
@@ -179,10 +182,10 @@ mod tests {
 
         assert_that!(
             map.get::<String>(&Key::Name).map(String::as_str),
-            eq(Some("Alice"))
+            some(eq("Alice"))
         );
-        assert_that!(map.get::<i64>(&Key::Age), eq(Some(&30)));
-        assert_that!(map.get::<bool>(&Key::IsActive), eq(Some(&true)));
+        assert_that!(map.get::<i64>(&Key::Age), some(eq(&30)));
+        assert_that!(map.get::<bool>(&Key::IsActive), some(eq(&true)));
     }
 
     #[test]
@@ -210,7 +213,7 @@ mod tests {
 
         *map.get_mut::<i64>(&Key::Age).expect("age should exist") = 31;
 
-        assert_that!(map.get::<i64>(&Key::Age), eq(Some(&31)));
+        assert_that!(map.get::<i64>(&Key::Age), some(eq(&31)));
     }
 
     #[test]
@@ -220,8 +223,8 @@ mod tests {
 
         let removed = map.remove::<String>(&Key::Name);
 
-        assert_that!(removed.as_deref(), eq(Some("Alice")));
-        assert_that!(map.contains_key(&Key::Name), eq(false));
+        assert_that!(removed.as_deref(), some(eq("Alice")));
+        assert_that!(map.contains_key(&Key::Name), is_false());
         assert_that!(map.len(), eq(0));
     }
 
@@ -230,8 +233,8 @@ mod tests {
         let mut map = HMap::new();
 
         assert_that!(map.insert(Key::Age, 30_i64), none());
-        assert_that!(map.insert(Key::Age, 31_i64), eq(Some(30)));
-        assert_that!(map.get::<i64>(&Key::Age), eq(Some(&31)));
+        assert_that!(map.insert(Key::Age, 31_i64), some(eq(30)));
+        assert_that!(map.get::<i64>(&Key::Age), some(eq(&31)));
         assert_that!(map.len(), eq(1));
     }
 
@@ -241,6 +244,27 @@ mod tests {
         let mut map = HMap::new();
         map.insert(Key::Age, 31_i64);
 
+        let _ = map.insert(Key::Age, String::from("thirty-one"));
+    }
+
+    #[test]
+    fn insert_different_type_for_same_key_keeps_original_value() {
+        let mut map = HMap::new();
+        map.insert(Key::Age, 31_i64);
+
+        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = map.insert(Key::Age, String::from("thirty-one"));
+        }));
+
+        assert_that!(panic.is_err(), is_true());
+        assert_that!(map.get::<i64>(&Key::Age), some(eq(&31)));
+    }
+
+    #[test]
+    #[should_panic(expected = "type mismatch in HMap::insert")]
+    fn insert_one_type_then_another_type_for_same_key_panics() {
+        let mut map = HMap::new();
+        map.insert(Key::Age, 31_i64);
         let _ = map.insert(Key::Age, String::from("thirty-one"));
     }
 
@@ -261,7 +285,7 @@ mod tests {
 
         map.clear();
 
-        assert_that!(map.is_empty(), eq(true));
+        assert_that!(map.is_empty(), is_true());
         assert_that!(map.len(), eq(0));
     }
 }
