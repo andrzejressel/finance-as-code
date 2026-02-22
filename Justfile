@@ -20,7 +20,7 @@ fmt:
 
 test:
     cargo nextest run
-    cargo test --doc -p finance_as_code_budget --features all
+    cargo test --doc --features all
 
 test-coverage:
     cargo llvm-cov nextest --cobertura --output-path covertura.xml
