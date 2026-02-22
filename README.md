@@ -155,3 +155,11 @@ fn main() {
 
 The Treeline sink performs a full replacement for the selected account (existing
 transactions and balances for that account are removed before import).
+
+## How `LocalDirectorySource` works
+
+`LocalDirectorySource` is the file-based source in the pipeline. You point it to a folder and provide a matching file reader, and it imports supported transaction files from that folder.
+
+- Use `create_mbank_file_reader()` for mBank CSV exports.
+- Use `create_lunchflow_file_reader()` for Lunch Flow JSON files.
+- In Lunch Flow flows, run the downloader first so it saves files locally, then use `LocalDirectorySource` to import them.
