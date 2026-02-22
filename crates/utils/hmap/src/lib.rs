@@ -1,6 +1,6 @@
-use std::any::{type_name, Any};
-use std::collections::hash_map::Entry;
+use std::any::{Any, type_name};
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
@@ -34,8 +34,9 @@ use std::hash::Hash;
 /// assert_eq!(map.get::<i64>(&Key::Age), Some(&30));
 /// assert_eq!(map.get::<String>(&Key::City), None);
 /// ```
-pub struct HMap<K> {
-    values: HashMap<K, Box<dyn Any>>,
+#[derive(PartialEq)]
+pub struct HMap<K: Eq + Hash> {
+    values: HashMap<K, Box<dyn DynValue>>,
 }
 
 impl<K> Debug for HMap<K>
@@ -53,19 +54,39 @@ where
     }
 }
 
-impl<K> PartialEq for HMap<K>
+trait DynValue: Any + Debug {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn eq_dyn(&self, other: &dyn DynValue) -> bool;
+}
+
+impl<T> DynValue for T
 where
-    K: Eq + Hash,
+    T: Any + Debug + PartialEq,
 {
-    fn eq(&self, other: &Self) -> bool {
-        self.is_empty() && other.is_empty()
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn eq_dyn(&self, other: &dyn DynValue) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<T>()
+            .is_some_and(|other_typed| self == other_typed)
     }
 }
 
-impl<K> HMap<K>
-where
-    K: Eq + Hash,
-{
+impl PartialEq for dyn DynValue {
+    fn eq(&self, other: &Self) -> bool {
+        self.eq_dyn(other)
+    }
+}
+
+impl<K: Eq + Hash> HMap<K> {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -75,12 +96,14 @@ where
 
     pub fn insert<T>(&mut self, key: K, value: T) -> Option<T>
     where
-        T: 'static,
+        T: 'static + Debug + PartialEq,
     {
         match self.values.entry(key) {
             Entry::Occupied(mut entry) => {
                 assert_type_match::<T>(entry.get().as_ref(), "insert");
-                Some(*entry.insert(Box::new(value)).downcast::<T>().unwrap())
+                let previous = entry.insert(Box::new(value));
+                let previous_any: Box<dyn Any> = previous;
+                Some(*previous_any.downcast::<T>().unwrap())
             }
             Entry::Vacant(entry) => {
                 entry.insert(Box::new(value));
@@ -97,7 +120,7 @@ where
         match self.values.get(key) {
             Some(value) => {
                 assert_type_match::<T>(value.as_ref(), "get");
-                Some(value.downcast_ref::<T>().unwrap())
+                Some(value.as_ref().as_any().downcast_ref::<T>().unwrap())
             }
             None => None,
         }
@@ -110,7 +133,7 @@ where
         match self.values.get_mut(key) {
             Some(value) => {
                 assert_type_match::<T>(value.as_ref(), "get_mut");
-                Some(value.downcast_mut::<T>().unwrap())
+                Some(value.as_mut().as_any_mut().downcast_mut::<T>().unwrap())
             }
             None => None,
         }
@@ -118,7 +141,7 @@ where
 
     pub fn remove<T>(&mut self, key: &K) -> Option<T>
     where
-        T: 'static,
+        T: 'static + Debug + PartialEq,
     {
         if let Some(existing) = self.values.get(key) {
             assert_type_match::<T>(existing.as_ref(), "remove");
@@ -126,7 +149,10 @@ where
 
         self.values
             .remove(key)
-            .map(|value| value.downcast::<T>().unwrap())
+            .map(|value| {
+                let value_any: Box<dyn Any> = value;
+                value_any.downcast::<T>().unwrap()
+            })
             .map(|value| *value)
     }
 
@@ -159,12 +185,12 @@ where
     }
 }
 
-fn assert_type_match<T>(value: &dyn Any, operation: &str)
+fn assert_type_match<T>(value: &dyn DynValue, operation: &str)
 where
     T: 'static,
 {
     assert!(
-        value.downcast_ref::<T>().is_some(),
+        value.as_any().downcast_ref::<T>().is_some(),
         "type mismatch in HMap::{operation}: requested `{}`",
         type_name::<T>()
     );
@@ -315,23 +341,39 @@ mod tests {
     }
 
     #[test]
-    fn partial_eq_is_true_for_two_empty_maps() {
-        let map1: HMap<Key> = HMap::new();
-        let map2: HMap<Key> = HMap::new();
-
-        assert_that!(map1 == map2, is_true());
-    }
-
-    #[test]
-    fn partial_eq_is_false_when_any_map_is_non_empty() {
+    fn partial_eq_is_true_for_equal_non_empty_maps() {
         let mut map1: HMap<Key> = HMap::new();
         let mut map2: HMap<Key> = HMap::new();
 
         map1.insert(Key::Name, String::from("Alice"));
         map2.insert(Key::Name, String::from("Alice"));
 
+        assert_that!(map1 == map2, is_true());
+        assert_that!(map1 == map1, is_true());
+    }
+
+    #[test]
+    fn partial_eq_is_true_for_maps_with_same_values_in_different_insert_order() {
+        let mut map1: HMap<Key> = HMap::new();
+        let mut map2: HMap<Key> = HMap::new();
+
+        map1.insert(Key::Name, String::from("Alice"));
+        map1.insert(Key::Age, 30_i64);
+        map2.insert(Key::Age, 30_i64);
+        map2.insert(Key::Name, String::from("Alice"));
+
+        assert_that!(map1 == map2, is_true());
+    }
+
+    #[test]
+    fn partial_eq_is_false_for_different_values() {
+        let mut map1: HMap<Key> = HMap::new();
+        let mut map2: HMap<Key> = HMap::new();
+
+        map1.insert(Key::Name, String::from("Alice"));
+        map2.insert(Key::Name, String::from("Bob"));
+
         assert_that!(map1 == map2, is_false());
-        assert_that!(map1 == map1, is_false());
     }
 
     #[test]
