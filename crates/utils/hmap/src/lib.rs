@@ -1,6 +1,7 @@
-use std::any::{Any, type_name};
-use std::collections::HashMap;
+use std::any::{type_name, Any};
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
 /// Heterogeneous map with typed accessors.
@@ -35,6 +36,30 @@ use std::hash::Hash;
 /// ```
 pub struct HMap<K> {
     values: HashMap<K, Box<dyn Any>>,
+}
+
+impl<K> Debug for HMap<K>
+where
+    K: Eq + Hash + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut keys = self.values.keys().collect::<Vec<_>>();
+        keys.sort_by_key(|k| format!("{:?}", k));
+
+        f.debug_struct("HMap")
+            .field("len", &self.values.len())
+            .field("keys", &keys)
+            .finish()
+    }
+}
+
+impl<K> PartialEq for HMap<K>
+where
+    K: Eq + Hash,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.is_empty() && other.is_empty()
+    }
 }
 
 impl<K> HMap<K>
@@ -287,5 +312,41 @@ mod tests {
 
         assert_that!(map.is_empty(), is_true());
         assert_that!(map.len(), eq(0));
+    }
+
+    #[test]
+    fn partial_eq_is_true_for_two_empty_maps() {
+        let map1: HMap<Key> = HMap::new();
+        let map2: HMap<Key> = HMap::new();
+
+        assert_that!(map1 == map2, is_true());
+    }
+
+    #[test]
+    fn partial_eq_is_false_when_any_map_is_non_empty() {
+        let mut map1: HMap<Key> = HMap::new();
+        let mut map2: HMap<Key> = HMap::new();
+
+        map1.insert(Key::Name, String::from("Alice"));
+        map2.insert(Key::Name, String::from("Alice"));
+
+        assert_that!(map1 == map2, is_false());
+        assert_that!(map1 == map1, is_false());
+    }
+
+    #[test]
+    fn debug_for_empty_map_shows_zero_len_and_no_keys() {
+        let map: HMap<Key> = HMap::new();
+
+        assert_that!(format!("{map:?}"), eq("HMap { len: 0, keys: [] }"));
+    }
+
+    #[test]
+    fn debug_for_non_empty_map_shows_len_and_sorted_keys() {
+        let mut map: HMap<Key> = HMap::new();
+        map.insert(Key::Name, String::from("Alice"));
+        map.insert(Key::Age, 30_i64);
+
+        assert_that!(format!("{map:?}"), eq("HMap { len: 2, keys: [Age, Name] }"));
     }
 }

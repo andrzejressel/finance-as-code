@@ -3,15 +3,16 @@ pub mod readers;
 pub mod sink;
 mod transaction_mapper;
 mod transactions_holder;
+pub type TagMap = HMap<String>;
 
+use crate::model::join_non_empty;
 use bon::Builder;
 use chrono::NaiveDate;
+use finance_as_code_utils_hmap::HMap;
 use rootcause::Result;
 use rusty_money::Money;
 use rusty_money::iso::Currency;
 use serde::Serialize;
-
-use crate::model::join_non_empty;
 pub use transaction_mapper::map_bank_transaction_to_transaction;
 pub use transactions_holder::TransactionHolder;
 
@@ -28,7 +29,7 @@ pub struct BankTransaction {
     pub other_side_account_number: Option<NonEmptyString>, // TODO: Make it a struct
 }
 
-#[derive(Builder, Clone, Debug, Serialize, PartialEq)]
+#[derive(Builder, Debug)]
 pub struct Transaction {
     pub id: uuid::Uuid,
     #[builder(into)]
@@ -40,20 +41,10 @@ pub struct Transaction {
     #[builder(into)]
     pub amount: Money<'static, Currency>,
     pub other_side_account_number: Option<NonEmptyString>, // TODO: Make it a struct
+    pub tags: TagMap,
 }
 
 impl Transaction {
-    pub fn from_bank_transaction(bank_tx: BankTransaction) -> Self {
-        Transaction {
-            id: uuid::Uuid::new_v4(),
-            date: bank_tx.date,
-            description: bank_tx.description,
-            counterparty: bank_tx.counterparty,
-            amount: bank_tx.amount,
-            other_side_account_number: bank_tx.other_side_account_number,
-        }
-    }
-
     pub fn get_full_description(&self) -> String {
         join_non_empty(
             &[self.description.as_str(), self.counterparty.as_str()],
@@ -66,6 +57,7 @@ impl Transaction {
 mod tests {
     use super::Transaction;
     use chrono::NaiveDate;
+    use finance_as_code_utils_hmap::HMap;
     use rusty_money::Money;
     use rusty_money::iso::USD;
 
@@ -78,6 +70,7 @@ mod tests {
             counterparty: "Coffee Shop".to_string(),
             amount: Money::from_major(10, USD),
             other_side_account_number: None,
+            tags: HMap::new(),
         };
 
         assert_eq!(tx.get_full_description(), "Card payment | Coffee Shop");
@@ -92,6 +85,7 @@ mod tests {
             counterparty: "   ".to_string(),
             amount: Money::from_major(10, USD),
             other_side_account_number: None,
+            tags: HMap::new(),
         };
 
         assert_eq!(tx.get_full_description(), "Card payment");
