@@ -12,6 +12,7 @@ use rootcause::prelude::ResultExt;
 
 #[cfg(feature = "source_lunchflow")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "source_lunchflow", feature = "all"))))]
+#[doc = include_str!("docs/lunchflow.md")]
 pub mod lunchflow {
     pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfig;
     pub use finance_as_code_budget_source_lunchflow::LunchFlowDownloaderConfigBuilder;
@@ -27,6 +28,7 @@ pub mod mbank {
 
 #[cfg(feature = "sink_treeline")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_treeline", feature = "all"))))]
+#[doc = include_str!("docs/treeline.md")]
 pub mod treeline {
     pub use finance_as_code_budget_sink_treeline::SinkTreelineOptions;
     pub use finance_as_code_budget_sink_treeline::SinkTreelineOptionsBuilder;
@@ -75,4 +77,18 @@ pub fn run(
     }
 
     Ok(())
+}
+
+#[doc(hidden)]
+pub mod __private {
+    use finance_as_code_budget_core::readers::Source;
+    use finance_as_code_budget_core::sink::Sink;
+
+    pub fn create_sink() -> Box<dyn Sink> {
+        panic!("Should not be invoked")
+    }
+
+    pub fn create_source() -> Box<dyn Source> {
+        panic!("Should not be invoked")
+    }
 }
