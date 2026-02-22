@@ -36,7 +36,7 @@ This forces DuckDB to download its native library at build time rather than link
 
 ## Verifying Your Work
 
-After making changes, run `just fmt` to format and fix lints, then `just test` to run the full test suite. Both must pass before considering work done.
+After making changes, run `just fmt` to format and fix lints, then `just test` to run the full test suite (including doc tests). Both must pass before considering work done.
 
 ## Project Structure
 

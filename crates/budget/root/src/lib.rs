@@ -1,3 +1,4 @@
+#![doc = include_str!("../../../../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub use finance_as_code_budget_core::FileReader;
