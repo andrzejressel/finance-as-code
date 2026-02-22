@@ -1,14 +1,14 @@
+use crate::ApiKey;
 use crate::dto::{
     CategoryDto, DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto,
     PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
     PutTransactionsResponse, TransactionDto,
 };
-use crate::ApiKey;
 use log::warn;
-use reqwest::header::{HeaderMap, RETRY_AFTER};
 use reqwest::StatusCode;
+use reqwest::header::{HeaderMap, RETRY_AFTER};
 use rootcause::prelude::ResultExt;
-use rootcause::{bail, Result};
+use rootcause::{Result, bail};
 use std::time::Duration;
 
 const MAX_RATE_LIMIT_RETRIES: u32 = 3;
@@ -52,7 +52,7 @@ pub trait LunchMoneyApi {
 
     /// Update up to 500 transactions in a single call (`PUT /transactions`).
     fn put_transactions(&self, request: &PutTransactionsRequest)
-        -> Result<PutTransactionsResponse>;
+    -> Result<PutTransactionsResponse>;
 
     /// Insert up to 500 transactions in a single call (`POST /transactions`).
     fn post_transactions(
@@ -370,12 +370,12 @@ impl LunchMoneyApi for LunchMoneyClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ApiKey;
     use crate::dto::{
         CategoryDto, ChildCategoryDto, DeleteTransactionsRequest, GetTransactionsParams,
         InsertTransactionDto, ManualAccountDto, PostTransactionsRequest, PostTransactionsResponse,
         PutTransactionsRequest, PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
     };
-    use crate::ApiKey;
     use chrono::{DateTime, FixedOffset};
     use finance_as_code_utils_chrono::date;
     use googletest::prelude::*;
