@@ -1345,6 +1345,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "finance_as_code_utils_hmap"
+version = "0.0.0-DEV"
+dependencies = [
+ "googletest",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,0 +1,10 @@
+[package]
+name = "finance_as_code_utils_hmap"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+googletest.workspace = true

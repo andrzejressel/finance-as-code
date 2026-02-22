@@ -20,6 +20,7 @@ finance_as_code_budget_core = { path = "crates/budget/core" }
 finance_as_code_budget_source_mbank = { path = "crates/budget/source/mbank" }
 finance_as_code_budget_source_lunchflow = { path = "crates/budget/source/lunchflow" }
 finance_as_code_utils_chrono = { path = "crates/utils/chrono" }
+finance_as_code_utils_hmap = { path = "crates/utils/hmap" }
 finance_as_code_budget_sink_treeline = { path = "crates/budget/sink/treeline" }
 finance_as_code_budget_sink_lunchmoney = { path = "crates/budget/sink/lunchmoney" }
 finance_as_code_api_lunchmoney = { path = "crates/api/lunchmoney" }
