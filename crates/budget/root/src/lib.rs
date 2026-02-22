@@ -48,6 +48,7 @@ pub mod lunchmoney {
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfigBuilder;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyTags;
     pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
 }
 
