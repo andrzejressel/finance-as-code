@@ -184,6 +184,7 @@ fn to_insert_transaction(transaction: &Transaction, account_id: i64) -> InsertTr
         date: transaction.date,
         amount: -*transaction.amount.amount(),
         currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
+        category_id: None,
         notes: Some(transaction.description.clone()),
         payee: Some(transaction.counterparty.clone()),
         manual_account_id: Some(account_id),
