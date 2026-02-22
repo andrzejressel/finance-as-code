@@ -3,13 +3,10 @@
 
 pub use finance_as_code_budget_core::FileReader;
 pub use finance_as_code_budget_core::TransactionHolder;
-use finance_as_code_budget_core::map_bank_transaction_to_transaction;
 pub use finance_as_code_budget_core::readers::LocalDirectorySource;
 pub use finance_as_code_budget_core::readers::Source;
+pub use finance_as_code_budget_core::run;
 pub use finance_as_code_budget_core::sink::Sink;
-use finance_as_code_budget_core::transformer::Transformer;
-use log::info;
-use rootcause::prelude::ResultExt;
 
 pub use finance_as_code_budget_core::BankTransaction;
 pub use finance_as_code_budget_core::Transaction;
@@ -52,40 +49,6 @@ pub mod lunchmoney {
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfigBuilder;
     pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
-}
-
-pub fn run(
-    sources: Vec<Box<dyn Source>>,
-    _transformers: Vec<Box<dyn Transformer>>,
-    sinks: Vec<Box<dyn Sink>>,
-) -> rootcause::Result<()> {
-    colog::init();
-
-    let mut holders = Vec::new();
-
-    for source in sources {
-        info!("Running source {}", source.name());
-        holders.push(
-            source
-                .read()
-                .context_with(|| format!("Failed to read from source {}", source.name()))?,
-        );
-        info!("Finished running source {}", source.name());
-    }
-
-    let holder = TransactionHolder::combine_vec(holders);
-    let bank_transactions = holder.into_transactions();
-    let transactions = map_bank_transaction_to_transaction(bank_transactions)
-        .context("Failed to map bank transactions to transactions")?;
-
-    for sink in sinks {
-        info!("Writing to sink {}", sink.name());
-        sink.write(&transactions)
-            .context_with(|| format!("Failed to write to sink {}", sink.name()))?;
-        info!("Finished writing to sink {}", sink.name());
-    }
-
-    Ok(())
 }
 
 #[doc(hidden)]
