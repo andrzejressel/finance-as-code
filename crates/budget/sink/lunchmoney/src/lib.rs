@@ -1,6 +1,9 @@
 mod tags;
 
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
+use finance_as_code_api_lunchmoney::category_service::{
+    DefaultLunchMoneyCategoriesService, LunchMoneyCategoriesService,
+};
 use finance_as_code_api_lunchmoney::deletion_service::{
     DefaultLunchMoneyTransactionsDeletionService, LunchMoneyTransactionsDeletionService,
 };
@@ -14,6 +17,7 @@ use log::info;
 use rootcause::Result;
 use rootcause::option_ext::OptionExt;
 use rootcause::prelude::ResultExt;
+use std::collections::{BTreeSet, HashMap};
 
 pub use tags::LunchMoneyTags;
 
@@ -79,6 +83,7 @@ pub struct LunchMoneySinkConfig {
 
 pub struct LunchMoneySink {
     config: LunchMoneySinkConfig,
+    categories_service: Box<dyn LunchMoneyCategoriesService>,
     transactions_deletion_service: Box<dyn LunchMoneyTransactionsDeletionService>,
     transactions_upload_service: Box<dyn LunchMoneyTransactionsUploadService>,
 }
@@ -86,6 +91,7 @@ pub struct LunchMoneySink {
 pub fn create_lunchmoney_sink(config: LunchMoneySinkConfig) -> impl Sink {
     LunchMoneySink {
         config,
+        categories_service: Box::new(DefaultLunchMoneyCategoriesService),
         transactions_deletion_service: Box::new(DefaultLunchMoneyTransactionsDeletionService),
         transactions_upload_service: Box::new(DefaultLunchMoneyTransactionsUploadService),
     }
@@ -116,6 +122,21 @@ impl Sink for LunchMoneySink {
             account_id
         );
 
+        let transaction_category_names = get_all_transaction_category_names(transactions);
+        info!(
+            "Resolving {} distinct Lunch Money category names from transactions",
+            transaction_category_names.len()
+        );
+
+        let all_category_name_to_id = self
+            .categories_service
+            .get_category_name_to_id_map(&client)
+            .context("failed to get Lunch Money category name to id map")?;
+
+        let transaction_category_name_to_id =
+            map_category_names_to_ids(&transaction_category_names, &all_category_name_to_id)
+                .context("failed to map transaction category names to ids")?;
+
         info!(
             "Getting all existing transactions for account '{}'",
             self.config.account_name.value()
@@ -141,8 +162,11 @@ impl Sink for LunchMoneySink {
 
         let insert_transactions: Vec<_> = transactions
             .iter()
-            .map(|transaction| to_insert_transaction(transaction, account_id))
-            .collect();
+            .map(|transaction| {
+                to_insert_transaction(transaction, account_id, &transaction_category_name_to_id)
+            })
+            .collect::<Result<Vec<_>>>()
+            .context("failed to convert transactions to Lunch Money DTOs")?;
 
         info!(
             "Uploading {} transactions to account '{}'",
@@ -179,17 +203,72 @@ impl LunchMoneySink {
     }
 }
 
-fn to_insert_transaction(transaction: &Transaction, account_id: i64) -> InsertTransactionDto {
-    InsertTransactionDto {
+fn to_insert_transaction(
+    transaction: &Transaction,
+    account_id: i64,
+    category_name_to_id: &HashMap<String, i64>,
+) -> Result<InsertTransactionDto> {
+    let category_id = transaction
+        .tags
+        .get_category_name()
+        .map(|category_name| {
+            category_name_to_id
+                .get(category_name)
+                .copied()
+                .context_with(|| {
+                    format!(
+                        "Lunch Money category '{}' for transaction '{}' not found",
+                        category_name, transaction.id
+                    )
+                })
+        })
+        .transpose()?;
+
+    Ok(InsertTransactionDto {
         date: transaction.date,
         amount: -*transaction.amount.amount(),
         currency: Some(transaction.amount.currency().iso_alpha_code.to_lowercase()),
-        category_id: None,
+        category_id,
         notes: Some(transaction.description.clone()),
         payee: Some(transaction.counterparty.clone()),
         manual_account_id: Some(account_id),
         external_id: Some(transaction.id.to_string()),
+    })
+}
+
+fn get_all_transaction_category_names(transactions: &[Transaction]) -> BTreeSet<String> {
+    transactions
+        .iter()
+        .filter_map(|transaction| transaction.tags.get_category_name().cloned())
+        .collect()
+}
+
+fn map_category_names_to_ids(
+    category_names: &BTreeSet<String>,
+    category_name_to_id: &HashMap<String, i64>,
+) -> Result<HashMap<String, i64>> {
+    let unknown_category_names: Vec<String> = category_names
+        .iter()
+        .filter(|category_name| !category_name_to_id.contains_key(category_name.as_str()))
+        .cloned()
+        .collect();
+
+    if !unknown_category_names.is_empty() {
+        rootcause::bail!(
+            "Unknown Lunch Money category names in transactions: {}",
+            unknown_category_names.join(", ")
+        );
     }
+
+    Ok(category_names
+        .iter()
+        .filter_map(|category_name| {
+            category_name_to_id
+                .get(category_name)
+                .copied()
+                .map(|category_id| (category_name.clone(), category_id))
+        })
+        .collect())
 }
 
 #[cfg(test)]
@@ -198,6 +277,7 @@ mod tests {
     use finance_as_code_api_lunchmoney::api::MockLunchMoneyApi;
     use finance_as_code_api_lunchmoney::dto::ManualAccountDto;
     use googletest::prelude::*;
+    use std::collections::{BTreeSet, HashMap};
 
     #[test]
     fn get_account_id_for_account_name_returns_account_id() {
@@ -249,6 +329,45 @@ mod tests {
         assert_that!(
             error.to_string(),
             contains_substring("Account with name 'Savings Jar' not found")
+        );
+    }
+
+    #[test]
+    fn map_category_names_to_ids_returns_ids_for_all_requested_names() {
+        let category_names = BTreeSet::from([
+            "Fuel".to_string(),
+            "Rent".to_string(),
+            "Automobile".to_string(),
+        ]);
+        let category_name_to_id = HashMap::from([
+            ("Automobile".to_string(), 86),
+            ("Fuel".to_string(), 315174),
+            ("Rent".to_string(), 83),
+            ("Groceries".to_string(), 999),
+        ]);
+
+        let mapped = map_category_names_to_ids(&category_names, &category_name_to_id).unwrap();
+
+        assert_that!(
+            mapped,
+            eq(&HashMap::from([
+                ("Automobile".to_string(), 86),
+                ("Fuel".to_string(), 315174),
+                ("Rent".to_string(), 83),
+            ]))
+        );
+    }
+
+    #[test]
+    fn map_category_names_to_ids_returns_error_when_name_is_missing() {
+        let category_names = BTreeSet::from(["Fuel".to_string(), "Nonexistent".to_string()]);
+        let category_name_to_id = HashMap::from([("Fuel".to_string(), 315174)]);
+
+        let error = map_category_names_to_ids(&category_names, &category_name_to_id).unwrap_err();
+
+        assert_that!(
+            error.to_string(),
+            contains_substring("Unknown Lunch Money category names in transactions: Nonexistent")
         );
     }
 }
