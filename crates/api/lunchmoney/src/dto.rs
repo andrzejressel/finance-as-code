@@ -47,6 +47,7 @@ pub struct CategoryDto {
     pub created_at: DateTime<FixedOffset>,
     pub is_group: bool,
     pub group_id: Option<i64>,
+    #[serde(default)]
     pub children: Vec<ChildCategoryDto>,
     pub archived: bool,
     pub archived_at: Option<DateTime<FixedOffset>>,
