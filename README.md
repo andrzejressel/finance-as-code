@@ -1,6 +1,7 @@
 # Finance as Code Budget
 
 [![Rust Docs](https://img.shields.io/badge/docs-rust-blue?logo=rust)](https://finance-as-code.readthedocs.io/en/latest/)
+[![codecov](https://codecov.io/gh/andrzejressel/finance-as-code/branch/main/graph/badge.svg)](https://codecov.io/gh/andrzejressel/finance-as-code)
 
 Finance as Code is a personal finance automation project that moves transactions from different inputs into budgeting destinations in a repeatable, code-driven way.
 
