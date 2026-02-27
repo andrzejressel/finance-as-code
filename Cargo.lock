@@ -1228,7 +1228,6 @@ dependencies = [
 name = "finance_as_code_budget"
 version = "0.1.0"
 dependencies = [
- "duckdb",
  "finance_as_code_budget_core",
  "finance_as_code_budget_sink_lunchmoney",
  "finance_as_code_budget_sink_treeline",
@@ -1327,7 +1326,6 @@ name = "finance_as_code_setup_github"
 version = "0.0.0-DEV"
 dependencies = [
  "anyhow",
- "bon",
  "itertools",
  "pulumi_gestalt_build",
  "pulumi_gestalt_rust",
@@ -2245,7 +2243,6 @@ version = "1.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d78bacb8933586cee3b550c39b610d314f9b7a48701ac7a914a046165a4ad8da"
 dependencies = [
- "cc",
  "flate2",
  "pkg-config",
  "reqwest 0.12.28",

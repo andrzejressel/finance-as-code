@@ -11,13 +11,9 @@ sink_lunchmoney = ["dep:finance_as_code_budget_sink_lunchmoney"]
 
 all = ["sink_lunchmoney", "source_lunchflow", "source_mbank", "sink_treeline"]
 
-bundled_db = ["dep:duckdb"]
-all_with_db = ["all", "bundled_db"]
-
 [dependencies]
 finance_as_code_budget_core.workspace = true
 finance_as_code_budget_source_lunchflow = { workspace = true, optional = true }
 finance_as_code_budget_source_mbank = { workspace = true, optional = true }
 finance_as_code_budget_sink_treeline = { workspace = true, optional = true }
 finance_as_code_budget_sink_lunchmoney = { workspace = true, optional = true }
-duckdb = { workspace = true, optional = true, features = ["bundled"] }
