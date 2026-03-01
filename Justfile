@@ -3,7 +3,7 @@ set windows-shell := ["pwsh.exe", "-c"]
 nightly := "nightly-2026-03-01"
 
 install:
-    rustup component add rustfmt
+
     rustup +{{nightly}} component add rustfmt
     rustup component add clippy
     rustup component add llvm-tools-preview
