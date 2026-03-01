@@ -80,11 +80,17 @@ Before searching in Google for any information check the AGENTS.md files for the
 The project is a personal finance automation pipeline:
 
 ```
-[Source: mBank CSV]      ──┐
-[Source: Lunchflow API]  ──┼──> TransactionHolder ──> map_bank_tx_to_tx ──┬──> [Sink: Treeline DuckDB]
-[Source: LocalDirectory] ──┘                                              └──> [Sink: Lunch Money API]
+[Setup: Lunchflow Download] ──> (writes JSON files to disk)
+                                        │
+                                        ↓
+                                [Source: Lunchflow]  (reads JSON files)
+[Source: mBank CSV]          ──┐
+                               │
+                               ↓
+                       TransactionHolder ──> map_bank_tx_to_tx ──┬──> [Sink: Treeline DuckDB]
+                                                                  └──> [Sink: Lunch Money API]
 ```
 
-All sources implement the `Source` trait, all file parsers implement `FileReader`, and all destinations implement `Sink`. The `budget/root` crate is the feature-gated public API that composes them.
+Setups implement the `Setup` trait and run first to perform side effects (like downloading files). Sources implement the `Source` trait, file parsers implement `FileReader`, and destinations implement `Sink`. The `budget/root` crate is the feature-gated public API that composes them.
 
 Each subproject has its own `AGENTS.md` with crate-specific details.

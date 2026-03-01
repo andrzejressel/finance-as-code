@@ -42,7 +42,7 @@ Affiliate disclosure: links to Lunch Flow and Lunch Money may be affiliate links
 | [Lunch Money](https://lunchmoney.app/?refer=jgrrpmpw) | `sink_lunchmoney` | Yes       |
 
 Notes:
-- For Lunch Flow, keep `create_lunchflow_downloader(...)` before `LocalDirectorySource(...)` in the `sources` vector.
+- For Lunch Flow, use the downloader as a setup (run before sources) to download files, then use `LocalDirectorySource` to read them.
 - `all` enables all source/sink features.
 - `all_with_db` enables all source/sink features and `bundled_db` for Treeline.
 
@@ -73,7 +73,7 @@ DUCKDB_DOWNLOAD_LIB = "1"
 
 ```rust,no_run
 use finance_as_code_budget::{
-    LocalDirectorySource, Sink, Source,
+    LocalDirectorySource, Setup, Sink, Source,
     lunchflow::{
         LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
     },
@@ -84,8 +84,7 @@ use finance_as_code_budget::{
 fn main() {
     let lunchflow_dir = "path/to/lunchflow/dir";
 
-    let sources: Vec<Box<dyn Source>> = vec![
-        // Keep downloader before LocalDirectorySource for Lunch Flow files.
+    let setups: Vec<Box<dyn Setup>> = vec![
         Box::new(create_lunchflow_downloader(
             LunchFlowDownloaderConfig::builder()
                 .account_id(123_i64)
@@ -94,6 +93,9 @@ fn main() {
                 .build(),
         )
         .expect("Failed to create Lunch Flow downloader")),
+    ];
+
+    let sources: Vec<Box<dyn Source>> = vec![
         Box::new(LocalDirectorySource::new(
             lunchflow_dir,
             create_lunchflow_file_reader(),
@@ -108,7 +110,7 @@ fn main() {
             .build(),
     ))];
 
-    run(sources, vec![], sinks).expect("Pipeline run failed");
+    run(setups, sources, vec![], sinks).expect("Pipeline run failed");
 }
 ```
 
@@ -116,7 +118,7 @@ fn main() {
 
 ```rust,no_run
 use finance_as_code_budget::{
-    LocalDirectorySource, Sink, Source,
+    LocalDirectorySource, Setup, Sink, Source,
     lunchflow::{
         LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
     },
@@ -127,8 +129,7 @@ use finance_as_code_budget::{
 fn main() {
     let lunchflow_dir = "path/to/lunchflow/dir";
 
-    let sources: Vec<Box<dyn Source>> = vec![
-        // Keep downloader before LocalDirectorySource for Lunch Flow files.
+    let setups: Vec<Box<dyn Setup>> = vec![
         Box::new(create_lunchflow_downloader(
             LunchFlowDownloaderConfig::builder()
                 .account_id(123_i64)
@@ -137,6 +138,9 @@ fn main() {
                 .build(),
         )
         .expect("Failed to create Lunch Flow downloader")),
+    ];
+
+    let sources: Vec<Box<dyn Source>> = vec![
         Box::new(LocalDirectorySource::new(
             lunchflow_dir,
             create_lunchflow_file_reader(),
@@ -150,7 +154,7 @@ fn main() {
             .build(),
     ))];
 
-    run(sources, vec![], sinks).expect("Pipeline run failed");
+    run(setups, sources, vec![], sinks).expect("Pipeline run failed");
 }
 ```
 
@@ -163,4 +167,4 @@ transactions and balances for that account are removed before import).
 
 - Use `create_mbank_file_reader()` for mBank CSV exports.
 - Use `create_lunchflow_file_reader()` for Lunch Flow JSON files.
-- In Lunch Flow flows, run the downloader first so it saves files locally, then use `LocalDirectorySource` to import them.
+- In Lunch Flow flows, run the downloader as a setup first so it saves files locally, then use `LocalDirectorySource` to import them.
