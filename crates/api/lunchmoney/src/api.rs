@@ -77,7 +77,7 @@ impl LunchMoneyClient {
             base_url,
             api_key,
             client: reqwest::blocking::Client::builder()
-                .timeout(None)
+                .timeout(Some(Duration::from_secs(120)))
                 .build()
                 .expect("Failed to build reqwest client"),
         }
