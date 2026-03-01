@@ -6,6 +6,7 @@ pub use finance_as_code_budget_core::TransactionHolder;
 pub use finance_as_code_budget_core::readers::LocalDirectorySource;
 pub use finance_as_code_budget_core::readers::Source;
 pub use finance_as_code_budget_core::run;
+pub use finance_as_code_budget_core::setup::Setup;
 pub use finance_as_code_budget_core::sink::Sink;
 
 pub use finance_as_code_budget_core::BankTransaction;
@@ -56,6 +57,7 @@ pub mod lunchmoney {
 #[doc(hidden)]
 pub mod __private {
     use finance_as_code_budget_core::readers::Source;
+    use finance_as_code_budget_core::setup::Setup;
     use finance_as_code_budget_core::sink::Sink;
 
     pub fn create_sink() -> Box<dyn Sink> {
@@ -63,6 +65,10 @@ pub mod __private {
     }
 
     pub fn create_source() -> Box<dyn Source> {
+        panic!("Should not be invoked")
+    }
+
+    pub fn create_setup() -> Box<dyn Setup> {
         panic!("Should not be invoked")
     }
 }
