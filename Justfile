@@ -1,8 +1,9 @@
 set windows-shell := ["pwsh.exe", "-c"]
 
+nightly := "nightly-2026-03-01"
+
 install:
-    rustup component add rustfmt
-    rustup +nightly-2026-02-22 component add rustfmt
+    rustup +{{nightly}} component add rustfmt
     rustup component add clippy
     rustup component add llvm-tools-preview
     mise install
@@ -11,11 +12,11 @@ release:
     cargo build --release
 
 check:
-    cargo +nightly-2026-02-22 fmt -- --check
+    cargo +{{nightly}} fmt -- --check
     cargo clippy --tests
 
 fmt:
-    cargo +nightly-2026-02-22 fmt
+    cargo +{{nightly}} fmt
     cargo clippy --tests --fix --allow-dirty --allow-staged
 
 test:
@@ -29,4 +30,4 @@ update-test-snapshots:
     cargo insta test --workspace --accept --test-runner nextest
 
 docs $RUSTDOCFLAGS="--cfg docsrs":
-    cargo +nightly-2026-02-22 doc --no-deps --features all -p finance_as_code_budget
+    cargo +{{nightly}} doc --no-deps --features all -p finance_as_code_budget
