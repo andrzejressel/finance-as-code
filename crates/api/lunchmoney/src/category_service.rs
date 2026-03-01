@@ -2,14 +2,20 @@ use crate::api::LunchMoneyApi;
 use log::info;
 use rootcause::Result;
 use rootcause::prelude::ResultExt;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CategoryNameToIdMaps {
+    pub assignable: HashMap<String, i64>,
+    pub non_assignable: HashMap<String, i64>,
+}
 
 #[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait LunchMoneyCategoriesService {
     fn get_category_name_to_id_map(
         &self,
         api_client: &dyn LunchMoneyApi,
-    ) -> Result<HashMap<String, i64>>;
+    ) -> Result<CategoryNameToIdMaps>;
 }
 
 pub struct DefaultLunchMoneyCategoriesService;
@@ -18,42 +24,64 @@ impl LunchMoneyCategoriesService for DefaultLunchMoneyCategoriesService {
     fn get_category_name_to_id_map(
         &self,
         api_client: &dyn LunchMoneyApi,
-    ) -> Result<HashMap<String, i64>> {
+    ) -> Result<CategoryNameToIdMaps> {
         info!("Fetching Lunch Money categories");
 
         let categories = api_client
             .get_all_categories()
             .context("failed to fetch Lunch Money categories")?;
 
-        let mut category_name_to_id = HashMap::new();
+        let mut assignable_category_name_to_id = HashMap::new();
+        let mut non_assignable_category_name_to_id = HashMap::new();
+        let mut existing_category_names = HashSet::new();
 
         for category in categories {
-            if let Some(existing_id) =
-                category_name_to_id.insert(category.name.clone(), category.id)
-            {
-                rootcause::bail!(
-                    "duplicate Lunch Money category name '{}' for ids {} and {}",
+            if category.children.is_empty() {
+                insert_unique_category_name(
+                    &mut assignable_category_name_to_id,
+                    &mut existing_category_names,
                     category.name,
-                    existing_id,
-                    category.id
-                );
-            }
+                    category.id,
+                )?;
+            } else {
+                insert_unique_category_name(
+                    &mut non_assignable_category_name_to_id,
+                    &mut existing_category_names,
+                    category.name,
+                    category.id,
+                )?;
 
-            for child in category.children {
-                if let Some(existing_id) = category_name_to_id.insert(child.name.clone(), child.id)
-                {
-                    rootcause::bail!(
-                        "duplicate Lunch Money category name '{}' for ids {} and {}",
+                for child in category.children {
+                    insert_unique_category_name(
+                        &mut assignable_category_name_to_id,
+                        &mut existing_category_names,
                         child.name,
-                        existing_id,
-                        child.id
-                    );
+                        child.id,
+                    )?;
                 }
             }
         }
 
-        Ok(category_name_to_id)
+        Ok(CategoryNameToIdMaps {
+            assignable: assignable_category_name_to_id,
+            non_assignable: non_assignable_category_name_to_id,
+        })
     }
+}
+
+fn insert_unique_category_name(
+    destination_map: &mut HashMap<String, i64>,
+    existing_category_names: &mut HashSet<String>,
+    category_name: String,
+    category_id: i64,
+) -> Result<()> {
+    if existing_category_names.contains(&category_name) {
+        rootcause::bail!("duplicate Lunch Money category name '{}'", category_name);
+    }
+
+    existing_category_names.insert(category_name.clone());
+    destination_map.insert(category_name, category_id);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -69,7 +97,7 @@ mod tests {
     }
 
     #[test]
-    fn get_category_name_to_id_map_includes_parent_and_child_categories() {
+    fn get_category_name_to_id_map_splits_assignable_and_non_assignable_categories() {
         let mut api_client = MockLunchMoneyApi::new();
         api_client
             .expect_get_all_categories()
@@ -129,15 +157,18 @@ mod tests {
             });
 
         let service = DefaultLunchMoneyCategoriesService;
-        let category_map = service.get_category_name_to_id_map(&api_client).unwrap();
+        let category_maps = service.get_category_name_to_id_map(&api_client).unwrap();
 
         assert_that!(
-            category_map,
+            category_maps.assignable,
             eq(&HashMap::from([
-                ("Automobile".to_string(), 86),
                 ("Fuel".to_string(), 315174),
                 ("Rent".to_string(), 83),
             ]))
+        );
+        assert_that!(
+            category_maps.non_assignable,
+            eq(&HashMap::from([("Automobile".to_string(), 86)]))
         );
     }
 

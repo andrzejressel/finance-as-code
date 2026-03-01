@@ -2,7 +2,7 @@ mod tags;
 
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
 use finance_as_code_api_lunchmoney::category_service::{
-    DefaultLunchMoneyCategoriesService, LunchMoneyCategoriesService,
+    CategoryNameToIdMaps, DefaultLunchMoneyCategoriesService, LunchMoneyCategoriesService,
 };
 use finance_as_code_api_lunchmoney::deletion_service::{
     DefaultLunchMoneyTransactionsDeletionService, LunchMoneyTransactionsDeletionService,
@@ -128,13 +128,13 @@ impl Sink for LunchMoneySink {
             transaction_category_names.len()
         );
 
-        let all_category_name_to_id = self
+        let category_name_to_id_maps = self
             .categories_service
             .get_category_name_to_id_map(&client)
             .context("failed to get Lunch Money category name to id map")?;
 
         let transaction_category_name_to_id =
-            map_category_names_to_ids(&transaction_category_names, &all_category_name_to_id)
+            map_category_names_to_ids(&transaction_category_names, &category_name_to_id_maps)
                 .context("failed to map transaction category names to ids")?;
 
         info!(
@@ -245,11 +245,41 @@ fn get_all_transaction_category_names(transactions: &[Transaction]) -> BTreeSet<
 
 fn map_category_names_to_ids(
     category_names: &BTreeSet<String>,
-    category_name_to_id: &HashMap<String, i64>,
+    category_name_to_id_maps: &CategoryNameToIdMaps,
 ) -> Result<HashMap<String, i64>> {
+    let non_assignable_category_names: Vec<String> = category_names
+        .iter()
+        .filter(|category_name| {
+            category_name_to_id_maps
+                .non_assignable
+                .contains_key(category_name.as_str())
+        })
+        .cloned()
+        .collect();
+
+    if !non_assignable_category_names.is_empty() {
+        let non_assignable_categories = non_assignable_category_names
+            .iter()
+            .map(|category_name| format!("'{}'", category_name))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        rootcause::bail!(
+            "Lunch Money category {} is a category group and cannot be used as transaction category. Use child categories instead.",
+            non_assignable_categories
+        );
+    }
+
     let unknown_category_names: Vec<String> = category_names
         .iter()
-        .filter(|category_name| !category_name_to_id.contains_key(category_name.as_str()))
+        .filter(|category_name| {
+            !category_name_to_id_maps
+                .assignable
+                .contains_key(category_name.as_str())
+                && !category_name_to_id_maps
+                    .non_assignable
+                    .contains_key(category_name.as_str())
+        })
         .cloned()
         .collect();
 
@@ -263,7 +293,8 @@ fn map_category_names_to_ids(
     Ok(category_names
         .iter()
         .filter_map(|category_name| {
-            category_name_to_id
+            category_name_to_id_maps
+                .assignable
                 .get(category_name)
                 .copied()
                 .map(|category_id| (category_name.clone(), category_id))
@@ -334,24 +365,21 @@ mod tests {
 
     #[test]
     fn map_category_names_to_ids_returns_ids_for_all_requested_names() {
-        let category_names = BTreeSet::from([
-            "Fuel".to_string(),
-            "Rent".to_string(),
-            "Automobile".to_string(),
-        ]);
-        let category_name_to_id = HashMap::from([
-            ("Automobile".to_string(), 86),
-            ("Fuel".to_string(), 315174),
-            ("Rent".to_string(), 83),
-            ("Groceries".to_string(), 999),
-        ]);
+        let category_names = BTreeSet::from(["Fuel".to_string(), "Rent".to_string()]);
+        let category_name_to_id_maps = CategoryNameToIdMaps {
+            assignable: HashMap::from([
+                ("Fuel".to_string(), 315174),
+                ("Rent".to_string(), 83),
+                ("Groceries".to_string(), 999),
+            ]),
+            non_assignable: HashMap::from([("Automobile".to_string(), 86)]),
+        };
 
-        let mapped = map_category_names_to_ids(&category_names, &category_name_to_id).unwrap();
+        let mapped = map_category_names_to_ids(&category_names, &category_name_to_id_maps).unwrap();
 
         assert_that!(
             mapped,
             eq(&HashMap::from([
-                ("Automobile".to_string(), 86),
                 ("Fuel".to_string(), 315174),
                 ("Rent".to_string(), 83),
             ]))
@@ -361,13 +389,36 @@ mod tests {
     #[test]
     fn map_category_names_to_ids_returns_error_when_name_is_missing() {
         let category_names = BTreeSet::from(["Fuel".to_string(), "Nonexistent".to_string()]);
-        let category_name_to_id = HashMap::from([("Fuel".to_string(), 315174)]);
+        let category_name_to_id_maps = CategoryNameToIdMaps {
+            assignable: HashMap::from([("Fuel".to_string(), 315174)]),
+            non_assignable: HashMap::new(),
+        };
 
-        let error = map_category_names_to_ids(&category_names, &category_name_to_id).unwrap_err();
+        let error =
+            map_category_names_to_ids(&category_names, &category_name_to_id_maps).unwrap_err();
 
         assert_that!(
             error.to_string(),
             contains_substring("Unknown Lunch Money category names in transactions: Nonexistent")
+        );
+    }
+
+    #[test]
+    fn map_category_names_to_ids_returns_error_when_name_is_non_assignable_group() {
+        let category_names = BTreeSet::from(["Automobile".to_string()]);
+        let category_name_to_id_maps = CategoryNameToIdMaps {
+            assignable: HashMap::from([("Fuel".to_string(), 315174)]),
+            non_assignable: HashMap::from([("Automobile".to_string(), 86)]),
+        };
+
+        let error =
+            map_category_names_to_ids(&category_names, &category_name_to_id_maps).unwrap_err();
+
+        assert_that!(
+            error.to_string(),
+            contains_substring(
+                "Lunch Money category 'Automobile' is a category group and cannot be used as transaction category"
+            )
         );
     }
 }
