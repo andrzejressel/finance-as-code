@@ -6,7 +6,7 @@ use crate::api::RealLunchFlowApi;
 use crate::downloader::{LunchflowDownloader, RealClock};
 use crate::file_reader::LunchflowFileReader;
 use finance_as_code_budget_core::FileReader;
-use finance_as_code_budget_core::readers::Source;
+use finance_as_code_budget_core::setup::Setup;
 use rootcause::*;
 use std::path::PathBuf;
 
@@ -68,10 +68,12 @@ pub struct LunchFlowDownloaderConfig {
     pub(crate) local_directory: PathBuf,
 }
 
-/// [Source] that does not actually read anything - it triggers download of the
-/// file from the Lunchflow API When used it should be first source, so the
-/// actual [create_lunchflow_file_reader] will read new file.
-pub fn create_lunchflow_downloader(config: LunchFlowDownloaderConfig) -> Result<impl Source> {
+/// [Setup] that downloads transactions from the Lunchflow API and saves them as
+/// a timestamped JSON file.
+///
+/// This performs a side effect (file creation) and should be run before
+/// [create_lunchflow_file_reader] reads the files.
+pub fn create_lunchflow_downloader(config: LunchFlowDownloaderConfig) -> Result<impl Setup> {
     let api = RealLunchFlowApi::new(
         "https://www.lunchflow.app/api/v1".to_string(),
         config.api_key,

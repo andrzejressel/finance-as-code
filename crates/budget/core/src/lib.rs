@@ -1,5 +1,6 @@
 pub mod model;
 pub mod readers;
+pub mod setup;
 pub mod sink;
 mod transaction_mapper;
 mod transactions_holder;
@@ -19,17 +20,28 @@ use serde::Serialize;
 pub use transaction_mapper::map_bank_transaction_to_transaction;
 pub use transactions_holder::TransactionHolder;
 
-/// Runs the end-to-end pipeline: read from all sources, map to transactions,
-/// apply all transformers in order, and write the result to all sinks.
+/// Runs the end-to-end pipeline: execute setups, read from all sources, map to
+/// transactions, apply all transformers in order, and write the result to all
+/// sinks.
 ///
+/// Setups are run first to perform any side effects like downloading files.
 /// Transformers are chained sequentially. Each transformer receives the output
 /// produced by the previous one.
 pub fn run(
+    setups: Vec<Box<dyn setup::Setup>>,
     sources: Vec<Box<dyn readers::Source>>,
     transformers: Vec<Box<dyn transformer::Transformer>>,
     sinks: Vec<Box<dyn sink::Sink>>,
 ) -> rootcause::Result<()> {
     colog::init();
+
+    for setup in setups {
+        info!("Running setup {}", setup.name());
+        setup
+            .run()
+            .context_with(|| format!("Failed to run setup {}", setup.name()))?;
+        info!("Finished running setup {}", setup.name());
+    }
 
     let mut holders = Vec::new();
 

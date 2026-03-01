@@ -2,11 +2,12 @@
 
 Use this source when you want to download transactions from Lunch Flow and feed them into the pipeline.
 
-The downloader writes a JSON file to the local directory as a side effect, so it must run before `LocalDirectorySource`.
+The downloader is a setup that performs a side effect (downloading and writing a JSON file to the local directory).
+It must run before `LocalDirectorySource` reads the files.
 
 ```rust,no_run
 use finance_as_code_budget::{
-    LocalDirectorySource, Source, run,
+    LocalDirectorySource, Setup, Source, run,
     lunchflow::{
         LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
     },
@@ -16,7 +17,7 @@ use finance_as_code_budget::{
 fn main() {
     let lunchflow_dir = "path/to/lunchflow/dir";
 
-    let sources: Vec<Box<dyn Source>> = vec![
+    let setups: Vec<Box<dyn Setup>> = vec![
         Box::new(create_lunchflow_downloader(
             LunchFlowDownloaderConfig::builder()
                 .account_id(123_i64)
@@ -25,6 +26,9 @@ fn main() {
                 .build(),
         )
         .expect("Failed to create Lunch Flow downloader")),
+    ];
+
+    let sources: Vec<Box<dyn Source>> = vec![
         Box::new(LocalDirectorySource::new(
             lunchflow_dir,
             create_lunchflow_file_reader(),
@@ -34,6 +38,6 @@ fn main() {
 
     let sinks = vec![create_sink()];
 
-    run(sources, vec![], sinks).expect("Pipeline run failed");
+    run(setups, sources, vec![], sinks).expect("Pipeline run failed");
 }
 ```

@@ -1,7 +1,6 @@
 use crate::LunchFlowAccountId;
 use crate::api::LunchFlowApi;
-use finance_as_code_budget_core::TransactionHolder;
-use finance_as_code_budget_core::readers::Source;
+use finance_as_code_budget_core::setup::Setup;
 use log::info;
 use rootcause::prelude::ResultExt;
 use rootcause::*;
@@ -58,12 +57,12 @@ impl LunchflowDownloader {
     }
 }
 
-impl Source for LunchflowDownloader {
-    fn name(&self) -> String {
-        "LunchflowDownloader".to_string()
+impl Setup for LunchflowDownloader {
+    fn name(&self) -> &str {
+        "LunchflowDownloader"
     }
 
-    fn read(&self) -> Result<TransactionHolder> {
+    fn run(&self) -> Result<()> {
         info!(
             "Getting transactions from LunchFlow API for account_id: [{}]",
             self.account_id.value()
@@ -86,7 +85,7 @@ impl Source for LunchflowDownloader {
             .context_with(|| format!("Failed to write transactions to file [{:?}]", file))?;
 
         info!("Transactions successfully written to file [{:?}]", file);
-        Ok(TransactionHolder::empty())
+        Ok(())
     }
 }
 
@@ -94,9 +93,7 @@ impl Source for LunchflowDownloader {
 mod tests {
     use super::*;
     use crate::api::{LunchFlowTransaction, LunchFlowTransactions, MockLunchFlowApi};
-    use finance_as_code_budget_core::readers::Source;
-    use googletest::assert_that;
-    use googletest::prelude::eq;
+    use finance_as_code_budget_core::setup::Setup;
 
     #[test]
     fn test_lunchflow_downloader() {
@@ -136,9 +133,7 @@ mod tests {
         )
         .expect("Failed to create LunchflowDownloader");
 
-        let result = downloader.read().unwrap();
-
-        assert_that!(result.number_of_transactions(), eq(0));
+        downloader.run().unwrap();
 
         let expected_file = temp_dir
             .path()
