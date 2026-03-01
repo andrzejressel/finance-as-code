@@ -62,6 +62,10 @@ pub trait LunchMoneyApi {
 
     /// Delete multiple transactions in one call (`DELETE /transactions`).
     fn delete_transactions(&self, request: &DeleteTransactionsRequest) -> Result<()>;
+
+    /// Force-delete a category or category group (`DELETE
+    /// /categories/{id}?force=true`).
+    fn delete_category(&self, id: i64) -> Result<()>;
 }
 
 /// Real HTTP client backed by the Lunch Money v2 REST API.
@@ -365,6 +369,37 @@ impl LunchMoneyApi for LunchMoneyClient {
             );
         }
     }
+
+    fn delete_category(&self, id: i64) -> Result<()> {
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .delete(format!("{}/categories/{}", self.base_url, id))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .query(&[("force", "true")])
+            },
+            "DELETE /categories/{id}",
+        )?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let headers = format_headers(response.headers());
+            let body = response.text().context_with(|| {
+                format!(
+                    "Failed to read error body from DELETE /categories/{id} (status {})",
+                    status
+                )
+            })?;
+            bail!(
+                "DELETE /categories/{id} returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
+        }
+    }
 }
 
 #[cfg(test)]
@@ -570,6 +605,59 @@ mod tests {
         client
             .delete_transactions(&DeleteTransactionsRequest { ids: vec![1, 2, 3] })
             .unwrap();
+
+        mock.assert();
+    }
+
+    #[test]
+    fn delete_category_force_sends_correct_request() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::DELETE)
+                .path("/categories/83")
+                .query_param("force", "true")
+                .header("Authorization", "Bearer test_key");
+            then.status(204);
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        client.delete_category(83).unwrap();
+
+        mock.assert();
+    }
+
+    #[test]
+    fn delete_category_returns_error_on_failure() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::DELETE)
+                .path("/categories/543210")
+                .query_param("force", "true")
+                .header("Authorization", "Bearer test_key");
+            then.status(404)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "message": "Not Found",
+                    "errors": [{"errMsg": "There is no category with the id: 543210."}]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let error = client.delete_category(543210).unwrap_err();
+        let error_string = error.to_string();
+
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("DELETE /categories/543210 returned error: 404 Not Found")
+        );
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("content-type=application/json")
+        );
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("There is no category with the id: 543210")
+        );
 
         mock.assert();
     }
