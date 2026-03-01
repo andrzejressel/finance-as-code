@@ -114,6 +114,13 @@ fn main() {
 }
 ```
 
+**Important notes about the Lunch Money sink:**
+
+- **Destructive write**: The Lunch Money sink performs a full replacement for the selected account. All existing transactions in that account are deleted before new ones are uploaded. There is no merge or upsert.
+- **Account scope**: Only use this sink for accounts that are fully managed by finance-as-code. The deletion only affects the specific manual account you configure, but any manually-entered transactions in that account will be lost on each run.
+- **Notes column**: Transaction descriptions are stored in a separate `notes` field in Lunch Money, keeping the original description intact without affecting the main payee field.
+- **Category requirements**: All category names referenced in your transactions must already exist in Lunch Money before running the pipeline. The sink will fail with an error if it encounters unknown categories.
+
 ## Quick start usage: Lunch Flow -> Treeline
 
 ```rust,no_run
