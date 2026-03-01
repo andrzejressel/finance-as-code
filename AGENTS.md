@@ -83,13 +83,12 @@ The project is a personal finance automation pipeline:
 [Setup: Lunchflow Download] ──> (writes JSON files to disk)
                                         │
                                         ↓
-[Source: mBank CSV]             ┌───────────────────────────┐
-[Source: LocalDirectory] ───────┤  (reads Lunchflow JSONs)  │
-                                └───────────────────────────┘
-                                        │
-                                        ↓
-                               TransactionHolder ──> map_bank_tx_to_tx ──┬──> [Sink: Treeline DuckDB]
-                                                                          └──> [Sink: Lunch Money API]
+                                [Source: Lunchflow]  (reads JSON files)
+[Source: mBank CSV]          ──┐
+                               │
+                               ↓
+                       TransactionHolder ──> map_bank_tx_to_tx ──┬──> [Sink: Treeline DuckDB]
+                                                                  └──> [Sink: Lunch Money API]
 ```
 
 Setups implement the `Setup` trait and run first to perform side effects (like downloading files). Sources implement the `Source` trait, file parsers implement `FileReader`, and destinations implement `Sink`. The `budget/root` crate is the feature-gated public API that composes them.
