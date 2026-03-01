@@ -3,7 +3,6 @@
 Use this source when you want to download transactions from Lunch Flow and feed them into the pipeline.
 
 The downloader is a setup that performs a side effect (downloading and writing a JSON file to the local directory).
-It must run before `LocalDirectorySource` reads the files.
 
 ```rust,no_run
 use finance_as_code_budget::{
