@@ -36,7 +36,7 @@ impl LunchMoneyCategoriesService for DefaultLunchMoneyCategoriesService {
         let mut existing_category_names = HashSet::new();
 
         for category in categories {
-            if category.children.is_empty() {
+            if !category.is_group {
                 insert_unique_category_name(
                     &mut assignable_category_name_to_id,
                     &mut existing_category_names,
@@ -188,6 +188,64 @@ mod tests {
         assert_that!(
             error.to_string(),
             contains_substring("failed to fetch Lunch Money categories")
+        );
+    }
+
+    #[test]
+    fn get_category_name_to_id_map_detects_group_by_is_group_field_not_children() {
+        let mut api_client = MockLunchMoneyApi::new();
+        api_client
+            .expect_get_all_categories()
+            .times(1)
+            .return_once(|| {
+                Ok(vec![
+                    CategoryDto {
+                        id: 100,
+                        name: "EmptyGroup".to_string(),
+                        description: Some("A group with no children yet".to_string()),
+                        is_income: false,
+                        exclude_from_budget: false,
+                        exclude_from_totals: false,
+                        updated_at: dt("2025-02-28T09:49:03.238Z"),
+                        created_at: dt("2025-01-28T09:49:03.238Z"),
+                        is_group: true,
+                        group_id: None,
+                        children: vec![],
+                        archived: false,
+                        archived_at: None,
+                        order: Some(1),
+                        collapsed: false,
+                    },
+                    CategoryDto {
+                        id: 101,
+                        name: "RegularCategory".to_string(),
+                        description: Some("A regular standalone category".to_string()),
+                        is_income: false,
+                        exclude_from_budget: false,
+                        exclude_from_totals: false,
+                        updated_at: dt("2025-02-28T09:49:03.238Z"),
+                        created_at: dt("2025-01-28T09:49:03.238Z"),
+                        is_group: false,
+                        group_id: None,
+                        children: vec![],
+                        archived: false,
+                        archived_at: None,
+                        order: Some(2),
+                        collapsed: false,
+                    },
+                ])
+            });
+
+        let service = DefaultLunchMoneyCategoriesService;
+        let category_maps = service.get_category_name_to_id_map(&api_client).unwrap();
+
+        assert_that!(
+            category_maps.assignable,
+            eq(&HashMap::from([("RegularCategory".to_string(), 101)]))
+        );
+        assert_that!(
+            category_maps.non_assignable,
+            eq(&HashMap::from([("EmptyGroup".to_string(), 100)]))
         );
     }
 
