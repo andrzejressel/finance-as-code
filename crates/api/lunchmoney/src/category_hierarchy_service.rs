@@ -50,6 +50,14 @@ impl LunchMoneyCategoryHierarchyCreationService
     ) -> Result<()> {
         info!("Starting Lunch Money category hierarchy replacement");
         let existing_categories = get_existing_categories(api_client)?;
+
+        if category_hierarchy_matches_request(&existing_categories, categories) {
+            info!(
+                "Existing Lunch Money category hierarchy already matches requested hierarchy, skipping replacement"
+            );
+            return Ok(());
+        }
+
         remove_existing_categories(api_client, &existing_categories)?;
         create_categories(api_client, categories)?;
         info!(
@@ -71,6 +79,71 @@ fn get_existing_categories(api_client: &dyn LunchMoneyApi) -> Result<Vec<crate::
         existing_categories.len()
     );
     Ok(existing_categories)
+}
+
+fn category_hierarchy_matches_request(
+    existing_categories: &[crate::dto::CategoryDto],
+    requested_categories: &[CategoryHierarchyItem],
+) -> bool {
+    if existing_categories.len() != requested_categories.len() {
+        return false;
+    }
+
+    let mut existing_top_level_categories =
+        existing_categories.iter().enumerate().collect::<Vec<_>>();
+    existing_top_level_categories
+        .sort_by_key(|(index, category)| (category.order.unwrap_or(*index as i64), *index));
+
+    existing_top_level_categories
+        .into_iter()
+        .zip(requested_categories)
+        .all(|((_, existing_category), requested_category)| {
+            category_matches_request(existing_category, requested_category)
+        })
+}
+
+fn category_matches_request(
+    existing_category: &crate::dto::CategoryDto,
+    requested_category: &CategoryHierarchyItem,
+) -> bool {
+    if existing_category.name != requested_category.name
+        || existing_category.description != requested_category.description
+        || !optional_bool_matches(requested_category.is_income, existing_category.is_income)
+        || !optional_bool_matches(
+            requested_category.exclude_from_budget,
+            existing_category.exclude_from_budget,
+        )
+        || !optional_bool_matches(
+            requested_category.exclude_from_totals,
+            existing_category.exclude_from_totals,
+        )
+        || existing_category.is_group == requested_category.children.is_empty()
+        || existing_category.group_id.is_some()
+        || existing_category.children.len() != requested_category.children.len()
+    {
+        return false;
+    }
+
+    let mut existing_children = existing_category
+        .children
+        .iter()
+        .enumerate()
+        .collect::<Vec<_>>();
+    existing_children.sort_by_key(|(index, child)| (child.order.unwrap_or(*index as i64), *index));
+
+    existing_children
+        .into_iter()
+        .zip(&requested_category.children)
+        .all(|((_, existing_child), requested_child)| {
+            existing_child.name == requested_child.name
+                && existing_child.description == requested_child.description
+                && !existing_child.is_group
+                && existing_child.group_id == Some(existing_category.id)
+        })
+}
+
+fn optional_bool_matches(requested: Option<bool>, existing: bool) -> bool {
+    requested.is_none_or(|requested_value| requested_value == existing)
 }
 
 fn remove_existing_categories(
@@ -220,7 +293,7 @@ fn create_child_category(
 mod tests {
     use super::*;
     use crate::api::MockLunchMoneyApi;
-    use crate::dto::CategoryDto;
+    use crate::dto::{CategoryDto, ChildCategoryDto};
     use chrono::{DateTime, FixedOffset};
     use googletest::prelude::*;
     use mockall::Sequence;
@@ -247,6 +320,87 @@ mod tests {
             order: None,
             collapsed: false,
         }
+    }
+
+    fn child_category_dto(
+        id: i64,
+        name: &str,
+        description: Option<&str>,
+        parent_id: i64,
+        order: i64,
+    ) -> ChildCategoryDto {
+        ChildCategoryDto {
+            id,
+            name: name.to_string(),
+            description: description.map(ToString::to_string),
+            is_income: false,
+            exclude_from_budget: false,
+            exclude_from_totals: false,
+            updated_at: dt("2025-02-28T09:49:03.238Z"),
+            created_at: dt("2025-01-28T09:49:03.238Z"),
+            is_group: false,
+            group_id: Some(parent_id),
+            archived: false,
+            archived_at: None,
+            order: Some(order),
+            collapsed: false,
+        }
+    }
+
+    #[test]
+    fn replace_category_hierarchy_skips_changes_when_existing_hierarchy_matches_request() {
+        let mut api_client = MockLunchMoneyApi::new();
+
+        api_client
+            .expect_get_all_categories()
+            .times(1)
+            .return_once(|| {
+                let mut transport = category_dto(10, "Transport", true, None);
+                transport.description = Some("Transportation costs".to_string());
+                transport.order = Some(0);
+                transport.children = vec![
+                    child_category_dto(11, "Fuel", None, 10, 0),
+                    child_category_dto(12, "Maintenance", None, 10, 1),
+                ];
+
+                let mut rent = category_dto(13, "Rent", false, None);
+                rent.order = Some(1);
+
+                Ok(vec![transport, rent])
+            });
+
+        let service = DefaultLunchMoneyCategoryHierarchyCreationService;
+        let categories = vec![
+            CategoryHierarchyItem {
+                name: "Transport".to_string(),
+                description: Some("Transportation costs".to_string()),
+                is_income: Some(false),
+                exclude_from_budget: Some(false),
+                exclude_from_totals: Some(false),
+                children: vec![
+                    ChildCategoryHierarchyItem {
+                        name: "Fuel".to_string(),
+                        description: None,
+                    },
+                    ChildCategoryHierarchyItem {
+                        name: "Maintenance".to_string(),
+                        description: None,
+                    },
+                ],
+            },
+            CategoryHierarchyItem {
+                name: "Rent".to_string(),
+                description: None,
+                is_income: Some(false),
+                exclude_from_budget: Some(false),
+                exclude_from_totals: Some(false),
+                children: vec![],
+            },
+        ];
+
+        service
+            .replace_category_hierarchy(&api_client, &categories)
+            .unwrap();
     }
 
     #[test]
