@@ -1,7 +1,7 @@
 use crate::ApiKey;
 use crate::dto::{
-    CategoryDto, DeleteTransactionsRequest, GetTransactionsParams, ManualAccountDto,
-    PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
+    CategoryDto, CreateCategoryRequest, DeleteTransactionsRequest, GetTransactionsParams,
+    ManualAccountDto, PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
     PutTransactionsResponse, TransactionDto,
 };
 use log::warn;
@@ -44,6 +44,9 @@ pub trait LunchMoneyApi {
 
     /// Fetch all categories in nested format (`GET /categories?format=nested`).
     fn get_all_categories(&self) -> Result<Vec<CategoryDto>>;
+
+    /// Create a category or category group (`POST /categories`).
+    fn create_category(&self, request: &CreateCategoryRequest) -> Result<CategoryDto>;
 
     /// Fetch every matching transaction, following `has_more` / `offset`
     /// pagination automatically until the full result set has been
@@ -270,6 +273,39 @@ impl LunchMoneyApi for LunchMoneyClient {
         }
     }
 
+    fn create_category(&self, request: &CreateCategoryRequest) -> Result<CategoryDto> {
+        let response = self.send_with_rate_limit_retry(
+            || {
+                self.client
+                    .post(format!("{}/categories", self.base_url))
+                    .header("Authorization", format!("Bearer {}", self.api_key.value()))
+                    .json(request)
+            },
+            "POST /categories",
+        )?;
+
+        if response.status().is_success() {
+            Ok(response
+                .json::<CategoryDto>()
+                .context("Failed to deserialize POST /categories response")?)
+        } else {
+            let status = response.status();
+            let headers = format_headers(response.headers());
+            let body = response.text().context_with(|| {
+                format!(
+                    "Failed to read error body from POST /categories (status {})",
+                    status
+                )
+            })?;
+            bail!(
+                "POST /categories returned error: {} | headers: {} | body: {}",
+                status,
+                headers,
+                body
+            );
+        }
+    }
+
     fn put_transactions(
         &self,
         request: &PutTransactionsRequest,
@@ -410,9 +446,10 @@ mod tests {
     use super::*;
     use crate::ApiKey;
     use crate::dto::{
-        CategoryDto, ChildCategoryDto, DeleteTransactionsRequest, GetTransactionsParams,
-        InsertTransactionDto, ManualAccountDto, PostTransactionsRequest, PostTransactionsResponse,
-        PutTransactionsRequest, PutTransactionsResponse, TransactionDto, UpdateTransactionDto,
+        CategoryDto, ChildCategoryDto, CreateCategoryRequest, DeleteTransactionsRequest,
+        GetTransactionsParams, InsertTransactionDto, ManualAccountDto, PostTransactionsRequest,
+        PostTransactionsResponse, PutTransactionsRequest, PutTransactionsResponse, TransactionDto,
+        UpdateTransactionDto,
     };
     use chrono::{DateTime, FixedOffset};
     use finance_as_code_utils_chrono::date;
@@ -1067,6 +1104,274 @@ mod tests {
                 order: Some(0),
                 collapsed: false,
             }])
+        );
+
+        mock.assert();
+    }
+
+    #[test]
+    fn create_category_sends_request_and_parses_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .json_body(json!({
+                    "name": "API Created Category",
+                    "description": "Test description of created category",
+                    "is_income": false,
+                    "exclude_from_budget": true,
+                    "exclude_from_totals": false,
+                    "is_group": false
+                }));
+            then.status(201)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "id": 90,
+                    "name": "API Created Category",
+                    "description": "Test description of created category",
+                    "is_income": false,
+                    "exclude_from_budget": true,
+                    "exclude_from_totals": false,
+                    "updated_at": "2025-05-26T19:56:52.699Z",
+                    "created_at": "2025-05-26T19:56:52.699Z",
+                    "is_group": false,
+                    "group_id": null,
+                    "archived": false,
+                    "archived_at": null,
+                    "order": null,
+                    "collapsed": false
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let category = client
+            .create_category(&CreateCategoryRequest {
+                name: "API Created Category".to_string(),
+                description: Some("Test description of created category".to_string()),
+                is_income: Some(false),
+                exclude_from_budget: Some(true),
+                exclude_from_totals: Some(false),
+                is_group: Some(false),
+                group_id: None,
+                order: None,
+            })
+            .unwrap();
+
+        assert_that!(
+            category,
+            eq(&CategoryDto {
+                id: 90,
+                name: "API Created Category".to_string(),
+                description: Some("Test description of created category".to_string()),
+                is_income: false,
+                exclude_from_budget: true,
+                exclude_from_totals: false,
+                updated_at: dt("2025-05-26T19:56:52.699Z"),
+                created_at: dt("2025-05-26T19:56:52.699Z"),
+                is_group: false,
+                group_id: None,
+                children: vec![],
+                archived: false,
+                archived_at: None,
+                order: None,
+                collapsed: false,
+            })
+        );
+
+        mock.assert();
+    }
+
+    #[test]
+    fn create_category_group_sends_request_and_parses_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .json_body(json!({
+                    "name": "API Created Category Group",
+                    "is_group": true
+                }));
+            then.status(201)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "id": 91,
+                    "name": "API Created Category Group",
+                    "description": null,
+                    "is_income": false,
+                    "exclude_from_budget": false,
+                    "exclude_from_totals": false,
+                    "updated_at": "2025-05-27T19:59:45.053Z",
+                    "created_at": "2025-05-27T19:59:45.053Z",
+                    "is_group": true,
+                    "group_id": null,
+                    "archived": false,
+                    "archived_at": null,
+                    "order": null,
+                    "collapsed": false,
+                    "children": [
+                        {
+                            "id": 83,
+                            "name": "Rent",
+                            "description": "Monthly Rent",
+                            "is_income": false,
+                            "exclude_from_budget": false,
+                            "exclude_from_totals": false,
+                            "updated_at": "2025-02-28T09:49:03.225Z",
+                            "created_at": "2025-01-28T09:49:03.225Z",
+                            "is_group": false,
+                            "group_id": 91,
+                            "archived": false,
+                            "archived_at": null,
+                            "order": 1,
+                            "collapsed": false
+                        },
+                        {
+                            "id": 315174,
+                            "name": "Fuel",
+                            "description": null,
+                            "is_income": false,
+                            "exclude_from_budget": false,
+                            "exclude_from_totals": false,
+                            "updated_at": "2025-05-27T19:59:45.053Z",
+                            "created_at": "2025-05-27T19:59:45.053Z",
+                            "is_group": false,
+                            "group_id": 91,
+                            "archived": false,
+                            "archived_at": null,
+                            "order": 2,
+                            "collapsed": false
+                        }
+                    ]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let category_group = client
+            .create_category(&CreateCategoryRequest {
+                name: "API Created Category Group".to_string(),
+                description: None,
+                is_income: None,
+                exclude_from_budget: None,
+                exclude_from_totals: None,
+                is_group: Some(true),
+                group_id: None,
+                order: None,
+            })
+            .unwrap();
+
+        assert_that!(category_group.id, eq(91));
+        assert_that!(category_group.is_group, eq(true));
+        assert_that!(category_group.children.len(), eq(2));
+        assert_that!(category_group.children[0].id, eq(83));
+        assert_that!(category_group.children[1].name.as_str(), eq("Fuel"));
+
+        mock.assert();
+    }
+
+    #[test]
+    fn create_category_with_group_id_sends_request_and_parses_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .json_body(json!({
+                    "name": "Fuel",
+                    "group_id": 91
+                }));
+            then.status(201)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "id": 315174,
+                    "name": "Fuel",
+                    "description": null,
+                    "is_income": false,
+                    "exclude_from_budget": false,
+                    "exclude_from_totals": false,
+                    "updated_at": "2025-05-27T19:59:45.053Z",
+                    "created_at": "2025-05-27T19:59:45.053Z",
+                    "is_group": false,
+                    "group_id": 91,
+                    "archived": false,
+                    "archived_at": null,
+                    "order": 2,
+                    "collapsed": false
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let category = client
+            .create_category(&CreateCategoryRequest {
+                name: "Fuel".to_string(),
+                description: None,
+                is_income: None,
+                exclude_from_budget: None,
+                exclude_from_totals: None,
+                is_group: None,
+                group_id: Some(91),
+                order: None,
+            })
+            .unwrap();
+
+        assert_that!(category.id, eq(315174));
+        assert_that!(category.group_id, some(eq(91)));
+        assert_that!(category.is_group, eq(false));
+
+        mock.assert();
+    }
+
+    #[test]
+    fn create_category_returns_error_on_failure() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/categories")
+                .header("Authorization", "Bearer test_key")
+                .json_body(json!({
+                    "name": "Bad Category Group",
+                    "is_group": true,
+                    "group_id": 83
+                }));
+            then.status(400)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "message": "Invalid Request Body",
+                    "errors": [
+                        {
+                            "errMsg": "Cannot specify a 'group_id' in request body if 'is_group' is also true"
+                        }
+                    ]
+                }));
+        });
+
+        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let error = client
+            .create_category(&CreateCategoryRequest {
+                name: "Bad Category Group".to_string(),
+                description: None,
+                is_income: None,
+                exclude_from_budget: None,
+                exclude_from_totals: None,
+                is_group: Some(true),
+                group_id: Some(83),
+                order: None,
+            })
+            .unwrap_err();
+        let error_string = error.to_string();
+
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("POST /categories returned error: 400 Bad Request")
+        );
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("content-type=application/json")
+        );
+        assert_that!(
+            error_string.as_str(),
+            contains_substring("Cannot specify a 'group_id' in request body")
         );
 
         mock.assert();

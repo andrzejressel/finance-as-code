@@ -55,6 +55,26 @@ pub struct CategoryDto {
     pub collapsed: bool,
 }
 
+/// Request body for `POST /categories`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CreateCategoryRequest {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_income: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exclude_from_budget: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exclude_from_totals: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_group: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<i64>,
+}
+
 /// Manual account as returned by `GET /manual_accounts`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ManualAccountDto {
