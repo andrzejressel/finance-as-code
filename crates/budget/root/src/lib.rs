@@ -45,6 +45,7 @@ pub mod treeline {
 
 #[cfg(feature = "sink_lunchmoney")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
+#[doc = include_str!("docs/lunchmoney.md")]
 pub mod lunchmoney {
     pub use finance_as_code_budget_sink_lunchmoney::CategoryHierarchyItem;
     pub use finance_as_code_budget_sink_lunchmoney::ChildCategoryHierarchyItem;
