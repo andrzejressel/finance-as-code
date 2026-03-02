@@ -16,6 +16,7 @@ log.workspace = true
 rust_decimal.workspace = true
 mockall.workspace = true
 chrono.workspace = true
+bon.workspace = true
 
 [dev-dependencies]
 httpmock.workspace = true
