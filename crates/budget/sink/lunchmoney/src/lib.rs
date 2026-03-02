@@ -1,6 +1,11 @@
 mod tags;
 
 use finance_as_code_api_lunchmoney::api::LunchMoneyApi;
+pub use finance_as_code_api_lunchmoney::category_hierarchy_service::CategoryHierarchyItem;
+pub use finance_as_code_api_lunchmoney::category_hierarchy_service::ChildCategoryHierarchyItem;
+use finance_as_code_api_lunchmoney::category_hierarchy_service::{
+    DefaultLunchMoneyCategoryHierarchyCreationService, LunchMoneyCategoryHierarchyCreationService,
+};
 use finance_as_code_api_lunchmoney::category_service::{
     CategoryNameToIdMaps, DefaultLunchMoneyCategoriesService, LunchMoneyCategoriesService,
 };
@@ -12,6 +17,7 @@ use finance_as_code_api_lunchmoney::upload_service::{
     DefaultLunchMoneyTransactionsUploadService, LunchMoneyTransactionsUploadService,
 };
 use finance_as_code_budget_core::Transaction;
+use finance_as_code_budget_core::setup::Setup;
 use finance_as_code_budget_core::sink::Sink;
 use log::info;
 use rootcause::Result;
@@ -81,11 +87,24 @@ pub struct LunchMoneySinkConfig {
     pub(crate) account_name: LunchMoneyAccountName,
 }
 
+#[derive(bon::Builder, Clone, Debug)]
+pub struct LunchMoneyCategorySetupConfig {
+    #[builder(into)]
+    /// Lunch Money API key generated in the Lunch Money app <https://my.lunchmoney.app/developers>
+    pub(crate) api_key: LunchMoneyApiKey,
+    pub(crate) categories: Vec<CategoryHierarchyItem>,
+}
+
 pub struct LunchMoneySink {
     config: LunchMoneySinkConfig,
     categories_service: Box<dyn LunchMoneyCategoriesService>,
     transactions_deletion_service: Box<dyn LunchMoneyTransactionsDeletionService>,
     transactions_upload_service: Box<dyn LunchMoneyTransactionsUploadService>,
+}
+
+pub struct LunchMoneyCategorySetup {
+    config: LunchMoneyCategorySetupConfig,
+    category_hierarchy_creation_service: Box<dyn LunchMoneyCategoryHierarchyCreationService>,
 }
 
 pub fn create_lunchmoney_sink(config: LunchMoneySinkConfig) -> impl Sink {
@@ -94,6 +113,47 @@ pub fn create_lunchmoney_sink(config: LunchMoneySinkConfig) -> impl Sink {
         categories_service: Box::new(DefaultLunchMoneyCategoriesService),
         transactions_deletion_service: Box::new(DefaultLunchMoneyTransactionsDeletionService),
         transactions_upload_service: Box::new(DefaultLunchMoneyTransactionsUploadService),
+    }
+}
+
+/// [Setup] that replaces Lunch Money category hierarchy with the requested
+/// structure.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use finance_as_code_budget_sink_lunchmoney::{
+///     CategoryHierarchyItem, ChildCategoryHierarchyItem, LunchMoneyCategorySetupConfig,
+///     create_lunchmoney_category_setup,
+/// };
+///
+/// fn main() {
+///     let setup = create_lunchmoney_category_setup(
+///         LunchMoneyCategorySetupConfig::builder()
+///             .api_key("lunchmoney_api_key")
+///             .categories(vec![CategoryHierarchyItem {
+///                 name: "Transport".to_string(),
+///                 description: Some("Transportation costs".to_string()),
+///                 is_income: Some(false),
+///                 exclude_from_budget: Some(false),
+///                 exclude_from_totals: Some(false),
+///                 children: vec![ChildCategoryHierarchyItem {
+///                     name: "Fuel".to_string(),
+///                     description: None,
+///                 }],
+///             }])
+///             .build(),
+///     );
+///
+///     let _ = setup;
+/// }
+/// ```
+pub fn create_lunchmoney_category_setup(config: LunchMoneyCategorySetupConfig) -> impl Setup {
+    LunchMoneyCategorySetup {
+        config,
+        category_hierarchy_creation_service: Box::new(
+            DefaultLunchMoneyCategoryHierarchyCreationService,
+        ),
     }
 }
 
@@ -181,6 +241,32 @@ impl Sink for LunchMoneySink {
                 &insert_transactions,
             )
             .context("failed to upload transactions to Lunch Money")?;
+
+        Ok(())
+    }
+}
+
+impl Setup for LunchMoneyCategorySetup {
+    fn name(&self) -> &str {
+        "Lunch Money Category Setup"
+    }
+
+    fn run(&self) -> Result<()> {
+        info!("Creating Lunch Money API client for category setup");
+
+        let client = finance_as_code_api_lunchmoney::api::LunchMoneyClient::new(
+            "https://api.lunchmoney.dev/v2".to_string(),
+            self.config.api_key.value().into(),
+        );
+
+        info!(
+            "Replacing Lunch Money category hierarchy with {} top-level categories",
+            self.config.categories.len()
+        );
+
+        self.category_hierarchy_creation_service
+            .replace_category_hierarchy(&client, &self.config.categories)
+            .context("failed to replace Lunch Money category hierarchy")?;
 
         Ok(())
     }
@@ -306,9 +392,24 @@ fn map_category_names_to_ids(
 mod tests {
     use super::*;
     use finance_as_code_api_lunchmoney::api::MockLunchMoneyApi;
+    use finance_as_code_api_lunchmoney::category_hierarchy_service::MockLunchMoneyCategoryHierarchyCreationService;
     use finance_as_code_api_lunchmoney::dto::ManualAccountDto;
     use googletest::prelude::*;
     use std::collections::{BTreeSet, HashMap};
+
+    fn sample_categories() -> Vec<CategoryHierarchyItem> {
+        vec![CategoryHierarchyItem {
+            name: "Transport".to_string(),
+            description: Some("Transportation costs".to_string()),
+            is_income: Some(false),
+            exclude_from_budget: Some(false),
+            exclude_from_totals: Some(false),
+            children: vec![ChildCategoryHierarchyItem {
+                name: "Fuel".to_string(),
+                description: None,
+            }],
+        }]
+    }
 
     #[test]
     fn get_account_id_for_account_name_returns_account_id() {
@@ -419,6 +520,53 @@ mod tests {
             contains_substring(
                 "Lunch Money category 'Automobile' is a category group and cannot be used as transaction category"
             )
+        );
+    }
+
+    #[test]
+    fn lunchmoney_category_setup_replaces_category_hierarchy() {
+        let categories = sample_categories();
+        let mut mock_service = MockLunchMoneyCategoryHierarchyCreationService::new();
+        let expected_categories = categories.clone();
+
+        mock_service
+            .expect_replace_category_hierarchy()
+            .times(1)
+            .withf(move |_, actual_categories| actual_categories == expected_categories.as_slice())
+            .return_once(|_, _| Ok(()));
+
+        let setup = LunchMoneyCategorySetup {
+            config: LunchMoneyCategorySetupConfig {
+                api_key: LunchMoneyApiKey::from("api_key"),
+                categories,
+            },
+            category_hierarchy_creation_service: Box::new(mock_service),
+        };
+
+        setup.run().unwrap();
+    }
+
+    #[test]
+    fn lunchmoney_category_setup_adds_context_when_replacement_fails() {
+        let mut mock_service = MockLunchMoneyCategoryHierarchyCreationService::new();
+
+        mock_service
+            .expect_replace_category_hierarchy()
+            .times(1)
+            .return_once(|_, _| rootcause::bail!("replacement failed"));
+
+        let setup = LunchMoneyCategorySetup {
+            config: LunchMoneyCategorySetupConfig {
+                api_key: LunchMoneyApiKey::from("api_key"),
+                categories: sample_categories(),
+            },
+            category_hierarchy_creation_service: Box::new(mock_service),
+        };
+
+        let error = setup.run().unwrap_err();
+        assert_that!(
+            error.to_string(),
+            contains_substring("failed to replace Lunch Money category hierarchy")
         );
     }
 }

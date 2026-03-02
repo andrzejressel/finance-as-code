@@ -17,6 +17,7 @@ pub struct CategoryHierarchyItem {
     ///
     /// To keep API simple, this model does not support creating an empty
     /// category group.
+    #[builder(default)]
     pub children: Vec<ChildCategoryHierarchyItem>,
 }
 

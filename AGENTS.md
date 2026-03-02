@@ -38,6 +38,11 @@ This forces DuckDB to download its native library at build time rather than link
 
 After making changes, run `just fmt` to format and fix lints, then `just test` to run the full test suite (including doc tests). Both must pass before considering work done.
 
+## Documentation Requirements
+
+- **Always add docs examples for new pipeline entry points**: whenever you introduce a new public setup, source, or sink constructor, add at least one user-facing Rust example showing how to create and use it.
+- Keep examples focused on real usage in the pipeline and place them with the public API docs (for example rustdoc on the constructor or `budget/root/src/docs/*.md` when appropriate).
+
 ## Testing Style
 
 - Prefer `googletest` matchers (`assert_that!`) over `assert_eq!` / boolean assertions in Rust tests.

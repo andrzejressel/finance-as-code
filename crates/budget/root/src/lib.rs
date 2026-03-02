@@ -46,11 +46,16 @@ pub mod treeline {
 #[cfg(feature = "sink_lunchmoney")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
 pub mod lunchmoney {
+    pub use finance_as_code_budget_sink_lunchmoney::CategoryHierarchyItem;
+    pub use finance_as_code_budget_sink_lunchmoney::ChildCategoryHierarchyItem;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyAccountName;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyApiKey;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyCategorySetupConfig;
+    pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyCategorySetupConfigBuilder;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfig;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneySinkConfigBuilder;
     pub use finance_as_code_budget_sink_lunchmoney::LunchMoneyTags;
+    pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_category_setup;
     pub use finance_as_code_budget_sink_lunchmoney::create_lunchmoney_sink;
 }
 
