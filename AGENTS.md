@@ -42,6 +42,7 @@ After making changes, run `just fmt` to format and fix lints, then `just test` t
 
 - **Always add docs examples for new pipeline entry points**: whenever you introduce a new public setup, source, or sink constructor, add at least one user-facing Rust example showing how to create and use it.
 - Keep examples focused on real usage in the pipeline and place them with the public API docs (for example rustdoc on the constructor or `budget/root/src/docs/*.md` when appropriate).
+- **Prefer `bon` builders over struct literals**: when a type exposes a `bon::Builder`, never construct that type directly with a struct literal in docs or implementation code.
 
 ## Testing Style
 

@@ -15,3 +15,5 @@ Public facade crate. Contains only re-exports and the `run()` orchestration func
 **Keep examples approachable**: prioritize end-user flow and outcomes over implementation details. Mention side effects (for example, full replacement in Treeline) in product terms.
 
 **Use a plain `main` in docs**: in README and `src/docs/*.md` Rust snippets, prefer `fn main() { ... }` (no return type). Handle fallible setup and `run(...)` with `expect(...)` and clear messages.
+
+**Prefer `bon` builders over struct literals**: when a type exposes a `bon::Builder`, never construct that type directly with a struct literal in docs examples.

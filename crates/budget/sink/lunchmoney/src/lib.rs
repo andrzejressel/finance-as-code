@@ -118,36 +118,6 @@ pub fn create_lunchmoney_sink(config: LunchMoneySinkConfig) -> impl Sink {
 
 /// [Setup] that replaces Lunch Money category hierarchy with the requested
 /// structure.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use finance_as_code_budget_sink_lunchmoney::{
-///     CategoryHierarchyItem, ChildCategoryHierarchyItem, LunchMoneyCategorySetupConfig,
-///     create_lunchmoney_category_setup,
-/// };
-///
-/// fn main() {
-///     let setup = create_lunchmoney_category_setup(
-///         LunchMoneyCategorySetupConfig::builder()
-///             .api_key("lunchmoney_api_key")
-///             .categories(vec![CategoryHierarchyItem {
-///                 name: "Transport".to_string(),
-///                 description: Some("Transportation costs".to_string()),
-///                 is_income: Some(false),
-///                 exclude_from_budget: Some(false),
-///                 exclude_from_totals: Some(false),
-///                 children: vec![ChildCategoryHierarchyItem {
-///                     name: "Fuel".to_string(),
-///                     description: None,
-///                 }],
-///             }])
-///             .build(),
-///     );
-///
-///     let _ = setup;
-/// }
-/// ```
 pub fn create_lunchmoney_category_setup(config: LunchMoneyCategorySetupConfig) -> impl Setup {
     LunchMoneyCategorySetup {
         config,
