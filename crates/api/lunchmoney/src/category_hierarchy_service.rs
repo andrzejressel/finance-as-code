@@ -47,40 +47,100 @@ impl LunchMoneyCategoryHierarchyCreationService
         api_client: &dyn LunchMoneyApi,
         categories: &[CategoryHierarchyItem],
     ) -> Result<()> {
-        info!("Replacing Lunch Money category hierarchy");
-
-        let existing_categories = api_client
-            .get_all_categories()
-            .context("failed to fetch existing Lunch Money categories")?;
-
-        for existing_category in existing_categories {
-            api_client
-                .delete_category(existing_category.id)
-                .context_with(|| {
-                    format!(
-                        "failed to delete existing Lunch Money category '{}' (id={})",
-                        existing_category.name, existing_category.id
-                    )
-                })?;
-        }
-
-        for (order, category) in categories.iter().enumerate() {
-            create_parent_category(api_client, category, order as i64).context_with(|| {
-                format!(
-                    "failed to create Lunch Money category hierarchy item '{}'",
-                    category.name
-                )
-            })?;
-        }
+        info!("Starting Lunch Money category hierarchy replacement");
+        let existing_categories = get_existing_categories(api_client)?;
+        remove_existing_categories(api_client, &existing_categories)?;
+        create_categories(api_client, categories)?;
+        info!(
+            "Finished Lunch Money category hierarchy replacement (top_level_count={})",
+            categories.len()
+        );
 
         Ok(())
     }
 }
+
+fn get_existing_categories(api_client: &dyn LunchMoneyApi) -> Result<Vec<crate::dto::CategoryDto>> {
+    info!("Starting to fetch existing Lunch Money categories");
+    let existing_categories = api_client
+        .get_all_categories()
+        .context("failed to fetch existing Lunch Money categories")?;
+    info!(
+        "Finished fetching existing Lunch Money categories (count={})",
+        existing_categories.len()
+    );
+    Ok(existing_categories)
+}
+
+fn remove_existing_categories(
+    api_client: &dyn LunchMoneyApi,
+    existing_categories: &[crate::dto::CategoryDto],
+) -> Result<()> {
+    info!(
+        "Starting to remove existing Lunch Money categories (count={})",
+        existing_categories.len()
+    );
+    for existing_category in existing_categories {
+        info!(
+            "Removing existing Lunch Money category '{}' (id={})",
+            existing_category.name, existing_category.id
+        );
+        api_client
+            .delete_category(existing_category.id)
+            .context_with(|| {
+                format!(
+                    "failed to delete existing Lunch Money category '{}' (id={})",
+                    existing_category.name, existing_category.id
+                )
+            })?;
+        info!(
+            "Finished removing existing Lunch Money category '{}' (id={})",
+            existing_category.name, existing_category.id
+        );
+    }
+
+    info!(
+        "Finished removing existing Lunch Money categories (count={})",
+        existing_categories.len()
+    );
+
+    Ok(())
+}
+
+fn create_categories(
+    api_client: &dyn LunchMoneyApi,
+    categories: &[CategoryHierarchyItem],
+) -> Result<()> {
+    info!(
+        "Starting to create requested Lunch Money categories (count={})",
+        categories.len()
+    );
+    for (order, category) in categories.iter().enumerate() {
+        create_parent_category(api_client, category, order as i64).context_with(|| {
+            format!(
+                "failed to create Lunch Money category hierarchy item '{}'",
+                category.name
+            )
+        })?;
+    }
+
+    info!(
+        "Finished creating requested Lunch Money categories (count={})",
+        categories.len()
+    );
+
+    Ok(())
+}
+
 fn create_parent_category(
     api_client: &dyn LunchMoneyApi,
     category: &CategoryHierarchyItem,
     order: i64,
 ) -> Result<()> {
+    info!(
+        "Starting to create top-level Lunch Money category '{}' (order={})",
+        category.name, order
+    );
     let is_group = !category.children.is_empty();
 
     let created_category = api_client
@@ -96,6 +156,11 @@ fn create_parent_category(
         })
         .context_with(|| format!("failed to create Lunch Money category '{}'", category.name))?;
 
+    info!(
+        "Created Lunch Money category '{}' (id={})",
+        category.name, created_category.id
+    );
+
     for (child_order, child) in category.children.iter().enumerate() {
         create_child_category(api_client, child, created_category.id, child_order as i64)
             .context_with(|| {
@@ -106,6 +171,11 @@ fn create_parent_category(
             })?;
     }
 
+    info!(
+        "Finished creating top-level Lunch Money category '{}'",
+        category.name
+    );
+
     Ok(())
 }
 
@@ -115,6 +185,10 @@ fn create_child_category(
     parent_id: i64,
     order: i64,
 ) -> Result<()> {
+    info!(
+        "Starting to create child Lunch Money category '{}' (parent_id={}, order={})",
+        child.name, parent_id, order
+    );
     api_client
         .create_category(&CreateCategoryRequest {
             name: child.name.clone(),
@@ -132,6 +206,11 @@ fn create_child_category(
                 child.name
             )
         })?;
+
+    info!(
+        "Finished creating child Lunch Money category '{}' (parent_id={})",
+        child.name, parent_id
+    );
 
     Ok(())
 }
