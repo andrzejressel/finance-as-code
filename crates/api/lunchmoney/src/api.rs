@@ -4,15 +4,30 @@ use crate::dto::{
     ManualAccountDto, PostTransactionsRequest, PostTransactionsResponse, PutTransactionsRequest,
     PutTransactionsResponse, TransactionDto,
 };
+use finance_as_code_utils_resilience::{
+    ExponentialBackoff, RetryError, retry_with_exponential_backoff_selective,
+};
 use log::warn;
 use reqwest::StatusCode;
 use reqwest::header::{HeaderMap, RETRY_AFTER};
 use rootcause::prelude::ResultExt;
-use rootcause::{Result, bail};
+use rootcause::{Result, bail, report};
 use std::time::Duration;
 
-const MAX_RATE_LIMIT_RETRIES: u32 = 3;
-const DEFAULT_RETRY_AFTER_SECS: u64 = 60;
+/// Number of times to retry a request that receives HTTP 429.
+const RATE_LIMIT_RETRIES: u32 = 3;
+/// Fallback sleep duration when no `Retry-After` header is present.
+const RATE_LIMIT_DEFAULT_WAIT: Duration = Duration::from_secs(60);
+
+/// Retries on HTTP 5xx error responses using exponential backoff (HTTP 429 is
+/// handled separately).
+const ERROR_RETRIES: u32 = 3;
+const ERROR_INITIAL_WAIT: Duration = Duration::from_secs(1);
+const ERROR_MAX_WAIT: Duration = Duration::from_secs(30);
+
+fn default_error_backoff() -> ExponentialBackoff {
+    ExponentialBackoff::new(ERROR_RETRIES, ERROR_INITIAL_WAIT, ERROR_MAX_WAIT)
+}
 
 /// Single-page response used internally by the pagination loop.
 #[derive(serde::Deserialize)]
@@ -76,6 +91,10 @@ pub struct LunchMoneyClient {
     base_url: String,
     api_key: ApiKey,
     client: reqwest::blocking::Client,
+    error_backoff: ExponentialBackoff,
+    /// Pluggable sleep function used by the 429 retry loop. In production this
+    /// is `std::thread::sleep`; in tests it can be replaced with a no-op.
+    sleep_fn: Box<dyn Fn(Duration) + Send + Sync>,
 }
 
 impl LunchMoneyClient {
@@ -87,18 +106,46 @@ impl LunchMoneyClient {
                 .timeout(Some(Duration::from_secs(120)))
                 .build()
                 .expect("Failed to build reqwest client"),
+            error_backoff: default_error_backoff(),
+            sleep_fn: Box::new(std::thread::sleep),
         }
     }
 
+    /// Constructs a client with fast (near-zero) backoff durations for use in
+    /// tests, where real waits would make the suite prohibitively slow.
+    #[cfg(test)]
+    fn new_for_test(base_url: String, api_key: ApiKey) -> Self {
+        Self {
+            base_url,
+            api_key,
+            client: reqwest::blocking::Client::builder()
+                .timeout(Some(Duration::from_secs(120)))
+                .build()
+                .expect("Failed to build reqwest client"),
+            error_backoff: ExponentialBackoff::new(
+                ERROR_RETRIES,
+                Duration::from_millis(1),
+                Duration::from_millis(2),
+            ),
+            sleep_fn: Box::new(|_| {}),
+        }
+    }
+
+    /// Inner layer: retries on HTTP 429 by sleeping the duration from the
+    /// `Retry-After` response header (falling back to
+    /// [`RATE_LIMIT_DEFAULT_WAIT`] when the header is absent or unparseable).
+    /// Returns the response as soon as it is not a 429, or returns an error
+    /// after [`RATE_LIMIT_RETRIES`] exhausted retries.
     fn send_with_rate_limit_retry<F>(
         &self,
-        mut build_request: F,
+        build_request: F,
         operation: &str,
     ) -> Result<reqwest::blocking::Response>
     where
-        F: FnMut() -> reqwest::blocking::RequestBuilder,
+        F: Fn() -> reqwest::blocking::RequestBuilder,
     {
-        for attempt in 0..=MAX_RATE_LIMIT_RETRIES {
+        let total_attempts = RATE_LIMIT_RETRIES + 1;
+        for attempt in 1..=total_attempts {
             let response = build_request()
                 .send()
                 .context_with(|| format!("Failed to send {operation} request"))?;
@@ -107,29 +154,71 @@ impl LunchMoneyClient {
                 return Ok(response);
             }
 
-            let retry_after_seconds = parse_retry_after_seconds(response.headers());
-            let attempt_number = attempt + 1;
-            let total_attempts = MAX_RATE_LIMIT_RETRIES + 1;
+            let retry_after = parse_retry_after_seconds(response.headers());
+            let headers = format_headers(response.headers());
 
-            if attempt == MAX_RATE_LIMIT_RETRIES {
+            if attempt == total_attempts {
                 warn!(
-                    "{operation} hit rate limit (attempt {attempt_number}/{total_attempts}); no retries left"
+                    "{operation} hit rate limit (attempt {attempt}/{total_attempts}): \
+                     retry-after={retry_after}s | headers: {headers}; no retries left"
                 );
-                return Ok(response);
+                bail!(
+                    "{operation} hit rate limit; retry-after={retry_after}s | headers: {headers}"
+                );
             }
 
             warn!(
-                "{operation} hit rate limit (attempt {attempt_number}/{total_attempts}); retrying in {retry_after_seconds}s"
+                "{operation} hit rate limit (attempt {attempt}/{total_attempts}): \
+                 retry-after={retry_after}s | headers: {headers}; retrying after {retry_after}s"
             );
-
-            std::thread::sleep(Duration::from_secs(retry_after_seconds));
+            (self.sleep_fn)(Duration::from_secs(retry_after));
         }
 
         unreachable!("retry loop must always return")
     }
 
+    /// Outer layer: sends a request through the 429 inner loop, then retries
+    /// the whole thing on HTTP 5xx server errors using exponential backoff
+    /// (via the resilience crate).
+    ///
+    /// 4xx client errors are returned immediately as fatal (deterministic
+    /// failures that retrying cannot fix). 429-exhaustion from the inner loop
+    /// is also propagated immediately without further outer retries.
+    fn send<F>(&self, build_request: F, operation: &str) -> Result<reqwest::blocking::Response>
+    where
+        F: Fn() -> reqwest::blocking::RequestBuilder,
+    {
+        retry_with_exponential_backoff_selective(
+            &format!("{operation} (error)"),
+            self.error_backoff,
+            || {
+                let response = self
+                    .send_with_rate_limit_retry(&build_request, operation)
+                    .map_err(RetryError::Fatal)?;
+
+                if response.status().is_server_error() {
+                    let status = response.status();
+                    let headers = format_headers(response.headers());
+                    let body = response.text().unwrap_or_default();
+                    return Err(RetryError::Retryable(report!(
+                        "{operation} returned error: {status} | headers: {headers} | body: {body}"
+                    )));
+                }
+                if response.status().is_client_error() {
+                    let status = response.status();
+                    let headers = format_headers(response.headers());
+                    let body = response.text().unwrap_or_default();
+                    return Err(RetryError::Fatal(report!(
+                        "{operation} returned error: {status} | headers: {headers} | body: {body}"
+                    )));
+                }
+                Ok(response)
+            },
+        )
+    }
+
     fn fetch_page(&self, params: &GetTransactionsParams) -> Result<PageResponse> {
-        let response = self.send_with_rate_limit_retry(
+        let response = self.send(
             || {
                 self.client
                     .get(format!("{}/transactions", self.base_url))
@@ -139,26 +228,9 @@ impl LunchMoneyClient {
             "GET /transactions",
         )?;
 
-        if response.status().is_success() {
-            Ok(response
-                .json::<PageResponse>()
-                .context("Failed to deserialize GET /transactions response")?)
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from GET /transactions (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "GET /transactions returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(response
+            .json::<PageResponse>()
+            .context("Failed to deserialize GET /transactions response")?)
     }
 }
 
@@ -167,7 +239,7 @@ fn parse_retry_after_seconds(headers: &HeaderMap) -> u64 {
         .get(RETRY_AFTER)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<u64>().ok())
-        .unwrap_or(DEFAULT_RETRY_AFTER_SECS)
+        .unwrap_or_else(|| RATE_LIMIT_DEFAULT_WAIT.as_secs())
 }
 
 fn format_headers(headers: &HeaderMap) -> String {
@@ -180,7 +252,7 @@ fn format_headers(headers: &HeaderMap) -> String {
 
 impl LunchMoneyApi for LunchMoneyClient {
     fn get_all_manual_accounts(&self) -> Result<Vec<ManualAccountDto>> {
-        let response = self.send_with_rate_limit_retry(
+        let response = self.send(
             || {
                 self.client
                     .get(format!("{}/manual_accounts", self.base_url))
@@ -189,27 +261,10 @@ impl LunchMoneyApi for LunchMoneyClient {
             "GET /manual_accounts",
         )?;
 
-        if response.status().is_success() {
-            Ok(response
-                .json::<ManualAccountsResponse>()
-                .context("Failed to deserialize GET /manual_accounts response")?
-                .manual_accounts)
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from GET /manual_accounts (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "GET /manual_accounts returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(response
+            .json::<ManualAccountsResponse>()
+            .context("Failed to deserialize GET /manual_accounts response")?
+            .manual_accounts)
     }
 
     fn get_all_transactions(&self, params: &GetTransactionsParams) -> Result<Vec<TransactionDto>> {
@@ -240,7 +295,7 @@ impl LunchMoneyApi for LunchMoneyClient {
     }
 
     fn get_all_categories(&self) -> Result<Vec<CategoryDto>> {
-        let response = self.send_with_rate_limit_retry(
+        let response = self.send(
             || {
                 self.client
                     .get(format!("{}/categories", self.base_url))
@@ -250,31 +305,14 @@ impl LunchMoneyApi for LunchMoneyClient {
             "GET /categories",
         )?;
 
-        if response.status().is_success() {
-            Ok(response
-                .json::<CategoriesResponse>()
-                .context("Failed to deserialize GET /categories response")?
-                .categories)
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from GET /categories (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "GET /categories returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(response
+            .json::<CategoriesResponse>()
+            .context("Failed to deserialize GET /categories response")?
+            .categories)
     }
 
     fn create_category(&self, request: &CreateCategoryRequest) -> Result<CategoryDto> {
-        let response = self.send_with_rate_limit_retry(
+        let response = self.send(
             || {
                 self.client
                     .post(format!("{}/categories", self.base_url))
@@ -284,33 +322,16 @@ impl LunchMoneyApi for LunchMoneyClient {
             "POST /categories",
         )?;
 
-        if response.status().is_success() {
-            Ok(response
-                .json::<CategoryDto>()
-                .context("Failed to deserialize POST /categories response")?)
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from POST /categories (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "POST /categories returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(response
+            .json::<CategoryDto>()
+            .context("Failed to deserialize POST /categories response")?)
     }
 
     fn put_transactions(
         &self,
         request: &PutTransactionsRequest,
     ) -> Result<PutTransactionsResponse> {
-        let response = self.send_with_rate_limit_retry(
+        let response = self.send(
             || {
                 self.client
                     .put(format!("{}/transactions", self.base_url))
@@ -320,33 +341,16 @@ impl LunchMoneyApi for LunchMoneyClient {
             "PUT /transactions",
         )?;
 
-        if response.status().is_success() {
-            Ok(response
-                .json::<PutTransactionsResponse>()
-                .context("Failed to deserialize PUT /transactions response")?)
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from PUT /transactions (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "PUT /transactions returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(response
+            .json::<PutTransactionsResponse>()
+            .context("Failed to deserialize PUT /transactions response")?)
     }
 
     fn post_transactions(
         &self,
         request: &PostTransactionsRequest,
     ) -> Result<PostTransactionsResponse> {
-        let response = self.send_with_rate_limit_retry(
+        let response = self.send(
             || {
                 self.client
                     .post(format!("{}/transactions", self.base_url))
@@ -356,30 +360,13 @@ impl LunchMoneyApi for LunchMoneyClient {
             "POST /transactions",
         )?;
 
-        if response.status().is_success() {
-            Ok(response
-                .json::<PostTransactionsResponse>()
-                .context("Failed to deserialize POST /transactions response")?)
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from POST /transactions (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "POST /transactions returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(response
+            .json::<PostTransactionsResponse>()
+            .context("Failed to deserialize POST /transactions response")?)
     }
 
     fn delete_transactions(&self, request: &DeleteTransactionsRequest) -> Result<()> {
-        let response = self.send_with_rate_limit_retry(
+        self.send(
             || {
                 self.client
                     .delete(format!("{}/transactions", self.base_url))
@@ -388,56 +375,20 @@ impl LunchMoneyApi for LunchMoneyClient {
             },
             "DELETE /transactions",
         )?;
-
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from DELETE /transactions (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "DELETE /transactions returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(())
     }
 
     fn delete_category(&self, id: i64) -> Result<()> {
-        let response = self.send_with_rate_limit_retry(
+        self.send(
             || {
                 self.client
                     .delete(format!("{}/categories/{}", self.base_url, id))
                     .header("Authorization", format!("Bearer {}", self.api_key.value()))
                     .query(&[("force", "true")])
             },
-            "DELETE /categories/{id}",
+            &format!("DELETE /categories/{id}"),
         )?;
-
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            let status = response.status();
-            let headers = format_headers(response.headers());
-            let body = response.text().context_with(|| {
-                format!(
-                    "Failed to read error body from DELETE /categories/{id} (status {})",
-                    status
-                )
-            })?;
-            bail!(
-                "DELETE /categories/{id} returned error: {} | headers: {} | body: {}",
-                status,
-                headers,
-                body
-            );
-        }
+        Ok(())
     }
 }
 
@@ -491,7 +442,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let accounts = client.get_all_manual_accounts().unwrap();
 
         assert_that!(
@@ -553,7 +505,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let transactions = client
             .get_all_transactions(&GetTransactionsParams {
                 manual_account_id: Some(42),
@@ -601,7 +554,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let response = client
             .put_transactions(&PutTransactionsRequest {
                 transactions: vec![UpdateTransactionDto {
@@ -641,7 +595,8 @@ mod tests {
             then.status(204);
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         client
             .delete_transactions(&DeleteTransactionsRequest { ids: vec![1, 2, 3] })
             .unwrap();
@@ -660,7 +615,8 @@ mod tests {
             then.status(204);
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         client.delete_category(83).unwrap();
 
         mock.assert();
@@ -682,7 +638,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let error = client.delete_category(543210).unwrap_err();
         let error_string = error.to_string();
 
@@ -739,7 +696,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let response = client
             .post_transactions(&PostTransactionsRequest {
                 transactions: vec![InsertTransactionDto {
@@ -767,21 +725,17 @@ mod tests {
 
     #[test]
     fn parse_retry_after_seconds_parses_header_and_uses_default_fallbacks() {
+        let fallback = RATE_LIMIT_DEFAULT_WAIT.as_secs();
+
         let mut headers = HeaderMap::new();
         headers.insert(RETRY_AFTER, HeaderValue::from_static("17"));
         assert_that!(parse_retry_after_seconds(&headers), eq(17));
 
         headers.insert(RETRY_AFTER, HeaderValue::from_static("not-a-number"));
-        assert_that!(
-            parse_retry_after_seconds(&headers),
-            eq(DEFAULT_RETRY_AFTER_SECS)
-        );
+        assert_that!(parse_retry_after_seconds(&headers), eq(fallback));
 
         headers.remove(RETRY_AFTER);
-        assert_that!(
-            parse_retry_after_seconds(&headers),
-            eq(DEFAULT_RETRY_AFTER_SECS)
-        );
+        assert_that!(parse_retry_after_seconds(&headers), eq(fallback));
     }
 
     #[test]
@@ -800,16 +754,17 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let error = client.get_all_manual_accounts().unwrap_err();
         let error_string = error.to_string();
 
         assert_that!(
             error_string.as_str(),
-            contains_substring("GET /manual_accounts returned error: 429 Too Many Requests")
+            contains_substring("GET /manual_accounts hit rate limit")
         );
-        assert_that!(error_string.as_str(), contains_substring("retry-after=0"));
-        mock.assert_calls((MAX_RATE_LIMIT_RETRIES + 1) as usize);
+        assert_that!(error_string.as_str(), contains_substring("retry-after=0s"));
+        mock.assert_calls((RATE_LIMIT_RETRIES + 1) as usize);
     }
 
     #[test]
@@ -879,7 +834,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let categories = client.get_all_categories().unwrap();
 
         assert_that!(
@@ -990,7 +946,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let categories = client.get_all_categories().unwrap();
 
         assert_that!(categories[0].updated_at.offset().local_minus_utc(), eq(0));
@@ -1033,7 +990,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let error = client.get_all_categories().unwrap_err();
         let error_string = error.to_string();
 
@@ -1082,7 +1040,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let categories = client.get_all_categories().unwrap();
 
         assert_that!(
@@ -1144,7 +1103,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let category = client
             .create_category(&CreateCategoryRequest {
                 name: "API Created Category".to_string(),
@@ -1247,7 +1207,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let category_group = client
             .create_category(&CreateCategoryRequest {
                 name: "API Created Category Group".to_string(),
@@ -1301,7 +1262,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let category = client
             .create_category(&CreateCategoryRequest {
                 name: "Fuel".to_string(),
@@ -1346,7 +1308,8 @@ mod tests {
                 }));
         });
 
-        let client = LunchMoneyClient::new(server.url(""), ApiKey::new("test_key".to_string()));
+        let client =
+            LunchMoneyClient::new_for_test(server.url(""), ApiKey::new("test_key".to_string()));
         let error = client
             .create_category(&CreateCategoryRequest {
                 name: "Bad Category Group".to_string(),

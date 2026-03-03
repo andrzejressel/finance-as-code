@@ -1214,6 +1214,7 @@ dependencies = [
  "bon",
  "chrono",
  "finance_as_code_utils_chrono",
+ "finance_as_code_utils_resilience",
  "googletest",
  "httpmock",
  "log",
@@ -1348,6 +1349,14 @@ name = "finance_as_code_utils_hmap"
 version = "0.0.0-DEV"
 dependencies = [
  "googletest",
+]
+
+[[package]]
+name = "finance_as_code_utils_resilience"
+version = "0.0.0-DEV"
+dependencies = [
+ "googletest",
+ "log",
 ]
 
 [[package]]

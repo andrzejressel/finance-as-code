@@ -17,6 +17,7 @@ rust_decimal.workspace = true
 mockall.workspace = true
 chrono.workspace = true
 bon.workspace = true
+finance_as_code_utils_resilience.workspace = true
 
 [dev-dependencies]
 httpmock.workspace = true

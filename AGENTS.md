@@ -72,7 +72,8 @@ finance-as-code/
 │   │       └── mbank/       # Source: parses mBank CSV exports (Windows-1250 encoding)
 │   └── utils/
 │       ├── chrono/          # Utility macros: date!() and datetime!() literals
-│       └── hmap/            # Utility runtime heterogeneous map (Any-backed)
+│       ├── hmap/            # Utility runtime heterogeneous map (Any-backed)
+│       └── resilience/      # Utility retry helpers (exponential backoff)
 └── setup/
     └── github/              # Pulumi IaC: manages GitHub repo settings (branch protection, labels)
 ```

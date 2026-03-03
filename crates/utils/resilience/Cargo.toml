@@ -1,0 +1,11 @@
+[package]
+name = "finance_as_code_utils_resilience"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+log.workspace = true
+
+[dev-dependencies]
+googletest.workspace = true
