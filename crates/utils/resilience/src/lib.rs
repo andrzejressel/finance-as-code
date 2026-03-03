@@ -156,7 +156,7 @@ where
 }
 
 /// Like [`retry_with_exponential_backoff`] but the closure returns
-/// `Result<T, `[`RetryError<E>`]`>`, allowing it to signal whether a failure
+/// `Result<T, RetryError<E>>`, allowing it to signal whether a failure
 /// is transient (retryable) or permanent (fatal / non-retryable).
 ///
 /// [`RetryError::Retryable`] errors trigger a backoff and a retry.
