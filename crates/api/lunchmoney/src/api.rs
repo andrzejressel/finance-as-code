@@ -199,21 +199,17 @@ impl LunchMoneyClient {
                     let status = response.status();
                     let headers = format_headers(response.headers());
                     let body = response.text().unwrap_or_default();
-                    return Err(RetryError::Retryable(
-                        report!(
-                            "{operation} returned error: {status} | headers: {headers} | body: {body}"
-                        ),
-                    ));
+                    return Err(RetryError::Retryable(report!(
+                        "{operation} returned error: {status} | headers: {headers} | body: {body}"
+                    )));
                 }
                 if response.status().is_client_error() {
                     let status = response.status();
                     let headers = format_headers(response.headers());
                     let body = response.text().unwrap_or_default();
-                    return Err(RetryError::Fatal(
-                        report!(
-                            "{operation} returned error: {status} | headers: {headers} | body: {body}"
-                        ),
-                    ));
+                    return Err(RetryError::Fatal(report!(
+                        "{operation} returned error: {status} | headers: {headers} | body: {body}"
+                    )));
                 }
                 Ok(response)
             },
