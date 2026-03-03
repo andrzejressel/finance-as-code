@@ -19,7 +19,8 @@ const RATE_LIMIT_RETRIES: u32 = 3;
 /// Fallback sleep duration when no `Retry-After` header is present.
 const RATE_LIMIT_DEFAULT_WAIT: Duration = Duration::from_secs(60);
 
-/// Retries on HTTP 5xx error responses using exponential backoff (HTTP 429 is handled separately).
+/// Retries on HTTP 5xx error responses using exponential backoff (HTTP 429 is
+/// handled separately).
 const ERROR_RETRIES: u32 = 3;
 const ERROR_INITIAL_WAIT: Duration = Duration::from_secs(1);
 const ERROR_MAX_WAIT: Duration = Duration::from_secs(30);
