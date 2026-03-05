@@ -1,0 +1,16 @@
+[package]
+name = "finance_as_code_budget_transformer_lua"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+finance_as_code_budget_core.workspace = true
+mlua.workspace = true
+rootcause.workspace = true
+
+[dev-dependencies]
+googletest.workspace = true
+chrono.workspace = true
+rusty-money.workspace = true
+uuid.workspace = true
