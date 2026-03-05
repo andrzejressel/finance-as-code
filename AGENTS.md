@@ -67,9 +67,11 @@ finance-as-code/
 │   │   ├── sink/
 │   │   │   ├── lunchmoney/   # Sink: writes transactions to Lunch Money via its API
 │   │   │   └── treeline/    # Sink: writes transactions to Treeline's DuckDB database
-│   │   └── source/
-│   │       ├── lunchflow/   # Source: downloads and parses Lunchflow API transactions
-│   │       └── mbank/       # Source: parses mBank CSV exports (Windows-1250 encoding)
+│   │   ├── source/
+│   │   │   ├── lunchflow/   # Source: downloads and parses Lunchflow API transactions
+│   │   │   └── mbank/       # Source: parses mBank CSV exports (Windows-1250 encoding)
+│   │   └── transformer/
+│   │       └── lua/         # Transformer: Lua-based transaction transformer (WIP)
 │   └── utils/
 │       ├── chrono/          # Utility macros: date!() and datetime!() literals
 │       ├── hmap/            # Utility runtime heterogeneous map (Any-backed)
