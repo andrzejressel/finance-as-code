@@ -6,8 +6,6 @@ license.workspace = true
 
 [dependencies]
 finance_as_code_budget_core.workspace = true
-mlua.workspace = true
-rootcause.workspace = true
 
 [dev-dependencies]
 googletest.workspace = true
