@@ -70,10 +70,9 @@ impl UserData for LuaTransaction {
             Ok(())
         });
 
-        // Since we can't clone HMap, split() will create a new transaction with same
-        // fields but NO tags. This is a limitation of the current HMap design
-        // if we don't want to change it.
-        methods.add_method("split", |_, this, ()| {
+        // Clone creates a copy of the transaction with the same fields and tags
+        // but with a new unique ID
+        methods.add_method("clone", |_, this, ()| {
             let borrow = this.inner.borrow();
 
             let new_tx = Transaction {
@@ -83,7 +82,7 @@ impl UserData for LuaTransaction {
                 counterparty: borrow.counterparty.clone(),
                 amount: borrow.amount,
                 other_side_account_number: borrow.other_side_account_number.clone(),
-                tags: finance_as_code_utils_hmap::HMap::new(),
+                tags: borrow.tags.clone(),
             };
 
             Ok(LuaTransaction {
@@ -276,7 +275,7 @@ mod tests {
     #[test]
     fn transformer_can_return_multiple_transactions() {
         let script = r#"
-            local tx2 = transaction:split()
+            local tx2 = transaction:clone()
             tx2.description = "Second"
             return {transaction, tx2}
         "#;
@@ -299,6 +298,46 @@ mod tests {
         let result = transformer.transform(tx);
 
         assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn clone_preserves_tags() {
+        let script = r#"
+            transaction:set_tag("category", "food")
+            transaction:set_tag("source", "bank")
+            local tx2 = transaction:clone()
+            tx2.description = "Cloned"
+            tx2:set_tag("category", "drink")
+            return {transaction, tx2}
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        assert_that!(result.len(), eq(2));
+
+        // Original transaction
+        assert_that!(result[0].description.as_str(), eq("Test transaction"));
+        assert_that!(
+            result[0].tags.get::<String>(&"category".to_string()),
+            some(eq(&"food".to_string()))
+        );
+        assert_that!(
+            result[0].tags.get::<String>(&"source".to_string()),
+            some(eq(&"bank".to_string()))
+        );
+
+        // Cloned transaction should have inherited tags but modified category
+        assert_that!(result[1].description.as_str(), eq("Cloned"));
+        assert_that!(
+            result[1].tags.get::<String>(&"category".to_string()),
+            some(eq(&"drink".to_string()))
+        );
+        assert_that!(
+            result[1].tags.get::<String>(&"source".to_string()),
+            some(eq(&"bank".to_string()))
+        );
     }
 
     #[test]

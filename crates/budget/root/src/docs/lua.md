@@ -51,7 +51,7 @@ Your Lua scripts have access to a global `transaction` object with these propert
 ### Methods:
 - `transaction:get_tag(key)` - Get tag value or `nil`
 - `transaction:set_tag(key, value)` - Set tag value
-- `transaction:split()` - Create a copy of the transaction (without tags)
+- `transaction:clone()` - Create a copy of the transaction with all fields and tags, but a new `id` (new UUID)
 
 ### Return values:
 - Return nothing → modified `transaction` is used
@@ -99,7 +99,7 @@ use chrono::NaiveDate;
 use uuid::Uuid;
 
 let script = r#"
-    local tax = transaction:split()
+    local tax = transaction:clone()
     tax.description = "Tax: " .. transaction.description
     tax:set_tag("category", "tax")
     transaction:set_tag("category", "main")
