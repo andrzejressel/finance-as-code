@@ -834,9 +834,9 @@ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "convert_case"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "633458d4ef8c78b72454de2d54fd6ab2e60f9e02be22f3c6104cdc8a4e0fceb9"
+checksum = "affbf0190ed2caf063e3def54ff444b449371d55c58e513a95ab98eca50adb49"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -2994,9 +2994,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_build"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee26b67acdab826f69ac8f6f0187a9b023dcd7dca8f3416752333584732dec69"
+checksum = "c15a6f799f2984ae4728510a5c9516e74af7d90bdd941ff051075660959636b0"
 dependencies = [
  "anyhow",
  "pulumi_gestalt_generator",
@@ -3006,9 +3006,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_core"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b766a8ec1f6d132627bae7f5d4b55225c16f2a7634fad8f7e9fb398c3541c22"
+checksum = "2a94fa213695ff24c5776766f09e5340598f56664d0b0cae244d148fe2b97a08"
 dependencies = [
  "anyhow",
  "futures",
@@ -3019,9 +3019,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_domain"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8adb73cdf3d33769f28b0a1eba427d83c1764e83bfa8715fd07f739eb710bc48"
+checksum = "8af169e9b15a1959af65f9876f1e0a75c61c9f7691d4cc826c9ec60655f3d7ea"
 dependencies = [
  "async-trait",
  "bon",
@@ -3030,9 +3030,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_generator"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c8e9bf66e6721d67a6afb531f80b5ce29e1ee7b71ebb2d66f28cf181f6ace06"
+checksum = "e3f86d1bd1909f1ff457d8cc26579870a38118cad7fd3a9edab1727150932697"
 dependencies = [
  "anyhow",
  "askama",
@@ -3053,9 +3053,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_grpc_connection"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef6f06c82d1f35cf5983db831e4cc87437589dde72f3332881223d55360b865e"
+checksum = "219423c4f1989473b540ea06a1913551b3e748e42667b94702972bcb574d646c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3073,9 +3073,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_proto"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1712a0c83dbd1cd2800803b47c3002daf6beb8ac8e125e2be1943ef91300fb9"
+checksum = "62e899a3ed1d5252c1b5f21ade1027da5f2c738f2abf9a12d4ef26ceb5785ffd"
 dependencies = [
  "prost",
  "prost-types",
@@ -3085,9 +3085,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_rust"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a001d3e1c36be932040c1ada9aa5ad018d48f9694e338408408f812b4831eced"
+checksum = "dfa75cf781339b44a5ca4f88dd8228225a0160edf12dca32590181348b58eb8b"
 dependencies = [
  "anyhow",
  "bon",
@@ -3100,9 +3100,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_rust_integration"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75f5ae5af7c8c97caeafa469ce72366e3cf4aa27c9618e929f0232cd3f224016"
+checksum = "edeb95112f257f9500a9ec0051f840189419a35e0d85b5752f1c229878abf1b5"
 dependencies = [
  "anyhow",
  "bon",
@@ -3120,9 +3120,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_schema"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c11a1314877609b8d956eefff2c177cf556b13b209996a6ce6e0df1392368da1"
+checksum = "46fa086b2b41685925bc203ad7ad5225f512afe2065fdf3ca8ef2fcc800f5fc1"
 dependencies = [
  "anyhow",
  "convert_case",
@@ -3135,9 +3135,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_serde_constant_string"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f12c3bebbe3afaf916f72564ad22b760b294a8bd3929776773b39a4c59e30739"
+checksum = "c56ea43ff3307f1511234e11a6becad4c4a9f3529e92e1d640ec978ecca55c87"
 dependencies = [
  "serde",
 ]
