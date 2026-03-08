@@ -55,8 +55,9 @@ impl JsonFileMap {
     /// Creates a new `JsonFileMap` backed by the specified file.
     ///
     /// If the file exists, its contents are loaded into the cache.
-    /// If the file does not exist, an empty map is created and the file is initialized.
-    /// If the file exists but is empty, it is treated as an empty map.
+    /// If the file does not exist, an empty map is created and the file is
+    /// initialized. If the file exists but is empty, it is treated as an
+    /// empty map.
     ///
     /// # Errors
     ///
@@ -69,11 +70,10 @@ impl JsonFileMap {
         let path = path.as_ref().to_path_buf();
 
         // Ensure parent directory exists
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
+        if let Some(parent) = path.parent()
+            && !parent.exists() {
                 fs::create_dir_all(parent)?;
             }
-        }
 
         let cache = if path.exists() {
             // Check if file is empty
