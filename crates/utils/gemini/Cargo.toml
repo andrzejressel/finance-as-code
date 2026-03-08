@@ -1,0 +1,16 @@
+[package]
+name = "finance_as_code_utils_gemini"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+genai.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+bon.workspace = true
+
+[dev-dependencies]
+googletest.workspace = true
+httpmock.workspace = true
