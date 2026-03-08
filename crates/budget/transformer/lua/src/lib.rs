@@ -1,7 +1,8 @@
 //! Lua-based transaction transformer.
 //!
-//! This module provides [`LuaTransformer`] that executes Lua scripts against financial transactions,
-//! allowing runtime customization of transaction processing without recompiling Rust code.
+//! This module provides [`LuaTransformer`] that executes Lua scripts against
+//! financial transactions, allowing runtime customization of transaction
+//! processing without recompiling Rust code.
 //!
 //! # Quick Start
 //!
@@ -37,7 +38,8 @@
 //!
 //! # Lua API
 //!
-//! Your Lua scripts have access to a global `transaction` object with these properties and methods:
+//! Your Lua scripts have access to a global `transaction` object with these
+//! properties and methods:
 //!
 //! **Read-only fields:**
 //! - `transaction.id` - UUID as string
@@ -181,8 +183,9 @@
 //!
 //! # Error Handling
 //!
-//! If a Lua script fails (syntax error, runtime error, etc.), an error is printed to stderr
-//! and an empty vector is returned. The original transaction cannot be recovered.
+//! If a Lua script fails (syntax error, runtime error, etc.), an error is
+//! printed to stderr and an empty vector is returned. The original transaction
+//! cannot be recovered.
 //!
 //! ```rust
 //! # use finance_as_code_budget_core::{Transaction, transformer::Transformer};
@@ -272,23 +275,26 @@ impl UserData for LuaTransaction {
             borrow.tags.insert(key, value);
             Ok(())
         });
-        
-        // Since we can't clone HMap, split() will create a new transaction with same fields but NO tags.
-        // This is a limitation of the current HMap design if we don't want to change it.
+
+        // Since we can't clone HMap, split() will create a new transaction with same
+        // fields but NO tags. This is a limitation of the current HMap design
+        // if we don't want to change it.
         methods.add_method("split", |_, this, ()| {
             let borrow = this.inner.borrow();
-            
+
             let new_tx = Transaction {
                 id: uuid::Uuid::new_v4(), // Give it a new ID
                 date: borrow.date,
                 description: borrow.description.clone(),
                 counterparty: borrow.counterparty.clone(),
-                amount: borrow.amount.clone(),
+                amount: borrow.amount,
                 other_side_account_number: borrow.other_side_account_number.clone(),
                 tags: finance_as_code_utils_hmap::HMap::new(),
             };
-            
-            Ok(LuaTransaction { inner: RefCell::new(new_tx) })
+
+            Ok(LuaTransaction {
+                inner: RefCell::new(new_tx),
+            })
         });
     }
 }
@@ -313,7 +319,9 @@ impl Transformer for LuaTransformer {
 
         let result: mlua::Result<Vec<Transaction>> = (|| {
             // We put the transaction in a global variable wrapped in LuaTransaction.
-            let lua_tx = LuaTransaction { inner: RefCell::new(transaction) };
+            let lua_tx = LuaTransaction {
+                inner: RefCell::new(transaction),
+            };
             lua.globals().set("transaction", lua_tx)?;
 
             let result_multivalue: mlua::MultiValue = lua.load(&self.script).eval()?;
@@ -325,7 +333,7 @@ impl Transformer for LuaTransformer {
                 return Ok(vec![lt.inner.into_inner()]);
             }
 
-            let result_value = result_multivalue.get(0).unwrap();
+            let result_value = result_multivalue.front().unwrap();
 
             if result_value.is_nil() {
                 return Ok(vec![]);
@@ -357,7 +365,7 @@ impl Transformer for LuaTransformer {
                 eprintln!("Lua transformation failed for {}: {:?}", self.name, e);
                 // We can't easily return original transaction here because it was moved.
                 // This is a trade-off for not having Clone.
-                vec![] 
+                vec![]
             }
         }
     }
@@ -366,6 +374,7 @@ impl Transformer for LuaTransformer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::NaiveDate;
     use finance_as_code_budget_core::TagMap;
     use googletest::assert_that;
     use googletest::prelude::eq;
@@ -373,7 +382,6 @@ mod tests {
     use rusty_money::Money;
     use rusty_money::iso::USD;
     use uuid::Uuid;
-    use chrono::NaiveDate;
 
     fn create_test_transaction() -> Transaction {
         Transaction {
@@ -406,8 +414,14 @@ mod tests {
         let result = transformer.transform(tx);
 
         assert_that!(result.len(), eq(1));
-        assert_that!(result[0].description.as_str(), eq("Test transaction (modified)"));
-        assert_that!(result[0].tags.get::<String>(&"source".to_string()), some(eq(&"lua".to_string())));
+        assert_that!(
+            result[0].description.as_str(),
+            eq("Test transaction (modified)")
+        );
+        assert_that!(
+            result[0].tags.get::<String>(&"source".to_string()),
+            some(eq(&"lua".to_string()))
+        );
     }
 
     #[test]
