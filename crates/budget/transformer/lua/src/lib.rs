@@ -179,9 +179,7 @@ mod tests {
     use super::*;
     use chrono::NaiveDate;
     use finance_as_code_budget_core::TagMap;
-    use googletest::assert_that;
-    use googletest::prelude::eq;
-    use googletest::prelude::some;
+    use googletest::prelude::*;
     use rusty_money::Money;
     use rusty_money::iso::USD;
     use uuid::Uuid;
@@ -195,6 +193,56 @@ mod tests {
             amount: Money::from_major(100, USD),
             other_side_account_number: None,
             tags: TagMap::new(),
+        }
+    }
+
+    /// Helper function for testing that exposes the Result type.
+    /// This allows tests to verify that errors are actually thrown.
+    fn transform_with_result(
+        transformer: &LuaTransformer,
+        transaction: Transaction,
+    ) -> mlua::Result<Vec<Transaction>> {
+        let safe_libs = StdLib::TABLE | StdLib::STRING | StdLib::MATH | StdLib::UTF8;
+
+        let lua = Lua::new_with(safe_libs, LuaOptions::default())
+            .expect("Failed to create safe Lua environment");
+
+        let lua_tx = LuaTransaction {
+            inner: RefCell::new(transaction),
+        };
+        lua.globals().set("transaction", lua_tx)?;
+
+        let result_multivalue: mlua::MultiValue = lua.load(&transformer.script).eval()?;
+
+        if result_multivalue.is_empty() {
+            let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+            let lt = ud.take::<LuaTransaction>()?;
+            return Ok(vec![lt.inner.into_inner()]);
+        }
+
+        let result_value = result_multivalue.front().unwrap();
+
+        if result_value.is_nil() {
+            return Ok(vec![]);
+        }
+
+        if let Some(ud) = result_value.as_userdata() {
+            let lt = ud.take::<LuaTransaction>()?;
+            Ok(vec![lt.inner.into_inner()])
+        } else if let Some(table) = result_value.as_table() {
+            let mut txs = Vec::new();
+            for res in table.sequence_values::<mlua::Value>() {
+                let val = res?;
+                if let Some(ud) = val.as_userdata() {
+                    let lt = ud.take::<LuaTransaction>()?;
+                    txs.push(lt.inner.into_inner());
+                }
+            }
+            Ok(txs)
+        } else {
+            let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+            let lt = ud.take::<LuaTransaction>()?;
+            Ok(vec![lt.inner.into_inner()])
         }
     }
 
@@ -266,10 +314,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'io' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("io"));
     }
 
     #[test]
@@ -284,10 +334,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'io' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("io"));
     }
 
     #[test]
@@ -301,10 +353,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'io' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("io"));
     }
 
     #[test]
@@ -315,10 +369,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'os' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("os"));
     }
 
     #[test]
@@ -329,10 +385,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'os' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("os"));
     }
 
     #[test]
@@ -343,10 +401,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'os' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("os"));
     }
 
     #[test]
@@ -357,10 +417,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'package' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("package"));
     }
 
     #[test]
@@ -371,10 +433,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'debug' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("debug"));
     }
 
     #[test]
@@ -387,10 +451,12 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transform_with_result(&transformer, tx);
 
-        // Script should fail and return empty vector
-        assert_that!(result.len(), eq(0));
+        // Should get an error about 'coroutine' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("coroutine"));
     }
 
     #[test]
