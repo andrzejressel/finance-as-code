@@ -35,7 +35,7 @@ fn main() {
 On first use, the transformer:
 
 1. Sends your `user_description` plus the full [Lua API reference](crate::lua) to the Gemini AI
-2. Receives generd Lua code back
+2. Receives generated Lua code back
 3. Caches the code to `cache_path` (JSON file, keyed by description)
 4. Executes the Lua code on each transaction
 
