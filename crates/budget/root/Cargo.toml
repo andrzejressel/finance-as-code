@@ -8,8 +8,10 @@ source_lunchflow = ["dep:finance_as_code_budget_source_lunchflow"]
 source_mbank = ["dep:finance_as_code_budget_source_mbank"]
 sink_treeline = ["dep:finance_as_code_budget_sink_treeline"]
 sink_lunchmoney = ["dep:finance_as_code_budget_sink_lunchmoney"]
+transformer_ai_lua = ["dep:finance_as_code_budget_transformer_ai_lua"]
 
 all = ["sink_lunchmoney", "source_lunchflow", "source_mbank", "sink_treeline"]
+all_with_ai = ["all", "transformer_ai_lua"]
 
 bundled_db = ["dep:duckdb"]
 all_with_db = ["all", "bundled_db"]
@@ -21,6 +23,7 @@ finance_as_code_budget_source_mbank = { workspace = true, optional = true }
 finance_as_code_budget_sink_treeline = { workspace = true, optional = true }
 finance_as_code_budget_sink_lunchmoney = { workspace = true, optional = true }
 finance_as_code_budget_transformer_lua.workspace = true
+finance_as_code_budget_transformer_ai_lua = { workspace = true, optional = true }
 duckdb = { workspace = true, optional = true, features = ["bundled"] }
 
 [dev-dependencies]

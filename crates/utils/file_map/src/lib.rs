@@ -6,16 +6,17 @@ use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 /// Trait for file-based key-value storage with string keys and string values.
+#[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait FileStringMap {
     /// Retrieves a value by key. Returns `None` if the key doesn't exist.
-    fn get(&self, key: &str) -> Option<&str>;
+    fn get(&self, key: &str) -> Option<String>;
 
     /// Inserts a key-value pair. Returns the previous value if the key existed.
     /// Persists changes to the file immediately.
     fn put(&mut self, key: &str, value: &str) -> Result<Option<String>>;
 
     /// Returns the path to the underlying file.
-    fn path(&self) -> &Path;
+    fn path(&self) -> PathBuf;
 }
 
 /// A file-based string-to-string map with in-memory caching.
@@ -38,7 +39,7 @@ pub trait FileStringMap {
 /// let mut map = JsonFileMap::new(&path).unwrap();
 ///
 /// let _ = map.put("name", "Alice");
-/// assert_eq!(map.get("name"), Some("Alice"));
+/// assert_eq!(map.get("name"), Some("Alice".to_string()));
 /// assert_eq!(map.get("unknown"), None);
 /// ```
 pub struct JsonFileMap {
@@ -129,8 +130,8 @@ impl JsonFileMap {
 }
 
 impl FileStringMap for JsonFileMap {
-    fn get(&self, key: &str) -> Option<&str> {
-        self.cache.get(key).map(|s| s.as_str())
+    fn get(&self, key: &str) -> Option<String> {
+        self.cache.get(key).cloned()
     }
 
     fn put(&mut self, key: &str, value: &str) -> Result<Option<String>> {
@@ -139,8 +140,8 @@ impl FileStringMap for JsonFileMap {
         Ok(previous)
     }
 
-    fn path(&self) -> &Path {
-        &self.path
+    fn path(&self) -> PathBuf {
+        self.path.clone()
     }
 }
 

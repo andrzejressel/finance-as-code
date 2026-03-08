@@ -52,6 +52,20 @@ After making changes, run `just fmt` to format and fix lints, then `just test` t
 
 More detailed matcher conventions live in `TESTING_GUIDELINES.md`.
 
+## Error Handling
+
+- **Always use `rootcause` for error handling**: wrap errors with context using `.context()` or `.context_with()` methods.
+- **Never use "naked" `?`**: always add context when propagating errors to make debugging easier.
+
+```rust
+// Good
+some_operation().context("failed to load config")?;
+some_operation().context_with(|| format!("failed to process item {id}"))?;
+
+// Bad - never do this
+some_operation()?;
+```
+
 ## Project Structure
 
 This is a Cargo workspace. All Rust crates live under `crates/` and infrastructure code under `setup/`.

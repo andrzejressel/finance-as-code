@@ -565,7 +565,7 @@ version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d314cc62af2b6b0c65780555abb4d02a03dd3b799cd42419044f0c38d99738c0"
 dependencies = [
- "darling 0.20.11",
+ "darling 0.21.3",
  "ident_case",
  "prettyplease",
  "proc-macro2",
@@ -1338,6 +1338,7 @@ dependencies = [
  "finance_as_code_budget_sink_treeline",
  "finance_as_code_budget_source_lunchflow",
  "finance_as_code_budget_source_mbank",
+ "finance_as_code_budget_transformer_ai_lua",
  "finance_as_code_budget_transformer_lua",
  "finance_as_code_utils_hmap",
  "rusty-money",
@@ -1431,6 +1432,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "finance_as_code_budget_transformer_ai_lua"
+version = "0.0.0-DEV"
+dependencies = [
+ "bon",
+ "chrono",
+ "finance_as_code_budget_core",
+ "finance_as_code_budget_transformer_lua",
+ "finance_as_code_utils_file_map",
+ "finance_as_code_utils_gemini",
+ "googletest",
+ "log",
+ "rootcause",
+ "rusty-money",
+ "tempfile",
+ "uuid",
+]
+
+[[package]]
 name = "finance_as_code_budget_transformer_lua"
 version = "0.0.0-DEV"
 dependencies = [
@@ -1439,6 +1458,7 @@ dependencies = [
  "finance_as_code_utils_hmap",
  "googletest",
  "mlua",
+ "mockall",
  "rootcause",
  "rusty-money",
  "uuid",
@@ -1469,6 +1489,7 @@ name = "finance_as_code_utils_file_map"
 version = "0.0.0-DEV"
 dependencies = [
  "googletest",
+ "mockall",
  "rootcause",
  "serde",
  "serde_json",
@@ -1484,6 +1505,8 @@ dependencies = [
  "genai",
  "googletest",
  "httpmock",
+ "mockall",
+ "rootcause",
  "serde_json",
  "tokio",
 ]

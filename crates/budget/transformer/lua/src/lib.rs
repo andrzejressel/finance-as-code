@@ -10,6 +10,86 @@ use mlua::UserDataFields;
 use mlua::UserDataMethods;
 use std::cell::RefCell;
 
+/// Trait for executing Lua scripts on transactions.
+///
+/// This trait allows mocking Lua execution in tests.
+#[cfg_attr(any(test, feature = "mock"), mockall::automock)]
+pub trait LuaExecutor {
+    /// Executes a Lua script on a transaction and returns the transformed
+    /// transactions.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the transformer (used for error reporting)
+    /// * `script` - The Lua script to execute
+    /// * `transaction` - The transaction to transform
+    ///
+    /// # Returns
+    ///
+    /// A vector of transformed transactions. May be empty if the transaction
+    /// was dropped.
+    fn execute(&self, name: &str, script: &str, transaction: Transaction) -> Vec<Transaction>;
+}
+
+/// Default Lua executor that uses the mlua crate.
+pub struct DefaultLuaExecutor;
+
+impl LuaExecutor for DefaultLuaExecutor {
+    fn execute(&self, name: &str, script: &str, transaction: Transaction) -> Vec<Transaction> {
+        let lua = Lua::new();
+
+        let result: mlua::Result<Vec<Transaction>> = (|| {
+            // We put the transaction in a global variable wrapped in LuaTransaction.
+            let lua_tx = LuaTransaction {
+                inner: RefCell::new(transaction),
+            };
+            lua.globals().set("transaction", lua_tx)?;
+
+            let result_multivalue: mlua::MultiValue = lua.load(script).eval()?;
+
+            if result_multivalue.is_empty() {
+                // Script returned nothing, use global transaction
+                let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+                let lt = ud.take::<LuaTransaction>()?;
+                return Ok(vec![lt.inner.into_inner()]);
+            }
+
+            let result_value = result_multivalue.front().unwrap();
+
+            if result_value.is_nil() {
+                return Ok(vec![]);
+            }
+
+            if let Some(ud) = result_value.as_userdata() {
+                let lt = ud.take::<LuaTransaction>()?;
+                Ok(vec![lt.inner.into_inner()])
+            } else if let Some(table) = result_value.as_table() {
+                let mut txs = Vec::new();
+                for res in table.sequence_values::<mlua::Value>() {
+                    let val = res?;
+                    if let Some(ud) = val.as_userdata() {
+                        let lt = ud.take::<LuaTransaction>()?;
+                        txs.push(lt.inner.into_inner());
+                    }
+                }
+                Ok(txs)
+            } else {
+                let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+                let lt = ud.take::<LuaTransaction>()?;
+                Ok(vec![lt.inner.into_inner()])
+            }
+        })();
+
+        match result {
+            Ok(transactions) => transactions,
+            Err(e) => {
+                eprintln!("Lua transformation failed for {}: {:?}", name, e);
+                vec![]
+            }
+        }
+    }
+}
+
 /// A transformer that executes Lua scripts on transactions.
 pub struct LuaTransformer {
     name: String,
