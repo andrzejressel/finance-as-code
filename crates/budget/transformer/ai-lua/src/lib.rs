@@ -1,5 +1,3 @@
-#![doc = include_str!("../../../root/src/docs/lua-ai.md")]
-
 use bon::Builder;
 use finance_as_code_budget_core::transformer::Transformer;
 use finance_as_code_budget_core::Transaction;
