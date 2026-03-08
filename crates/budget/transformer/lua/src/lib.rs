@@ -3,6 +3,8 @@
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::transformer::Transformer;
 use mlua::Lua;
+use mlua::LuaOptions;
+use mlua::StdLib;
 use mlua::UserData;
 use mlua::UserDataFields;
 use mlua::UserDataMethods;
@@ -107,7 +109,17 @@ impl Transformer for LuaTransformer {
     }
 
     fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
-        let lua = Lua::new();
+        // Create a safe Lua environment without IO, OS, PACKAGE, and DEBUG libraries
+        // This prevents scripts from performing file I/O, executing system commands,
+        // loading packages, or using debug introspection.
+        let safe_libs = StdLib::TABLE
+            | StdLib::STRING
+            | StdLib::MATH
+            | StdLib::UTF8
+            | StdLib::COROUTINE;
+
+        let lua = Lua::new_with(safe_libs, LuaOptions::default())
+            .expect("Failed to create safe Lua environment");
 
         let result: mlua::Result<Vec<Transaction>> = (|| {
             // We put the transaction in a global variable wrapped in LuaTransaction.
@@ -242,5 +254,184 @@ mod tests {
         let result = transformer.transform(tx);
 
         assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_io_open() {
+        let script = r#"
+            local f = io.open("/etc/passwd", "r")
+            if f then
+                f:close()
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_io_write() {
+        let script = r#"
+            local f = io.open("/tmp/test.txt", "w")
+            if f then
+                f:write("malicious content")
+                f:close()
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_io_popen() {
+        let script = r#"
+            local handle = io.popen("ls")
+            if handle then
+                handle:close()
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_os_execute() {
+        let script = r#"
+            os.execute("echo 'malicious command'")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_os_remove() {
+        let script = r#"
+            os.remove("/tmp/test.txt")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_os_rename() {
+        let script = r#"
+            os.rename("/tmp/old.txt", "/tmp/new.txt")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_package_loadlib() {
+        let script = r#"
+            package.loadlib("/lib/x86_64-linux-gnu/libc.so.6", "malloc")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_debug_getinfo() {
+        let script = r#"
+            debug.getinfo(1)
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_allows_safe_string_operations() {
+        let script = r#"
+            transaction.description = string.upper(transaction.description)
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Safe operations should work
+        assert_that!(result.len(), eq(1));
+        assert_that!(result[0].description.as_str(), eq("TEST TRANSACTION"));
+    }
+
+    #[test]
+    fn transformer_allows_safe_math_operations() {
+        let script = r#"
+            local amount_num = tonumber(transaction.amount)
+            if amount_num then
+                local rounded = math.floor(amount_num + 0.5)
+                transaction:set_tag("rounded", tostring(rounded))
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Safe operations should work
+        assert_that!(result.len(), eq(1));
+        assert_that!(
+            result[0].tags.get::<String>(&"rounded".to_string()),
+            some(eq(&"100".to_string()))
+        );
+    }
+
+    #[test]
+    fn transformer_allows_safe_table_operations() {
+        let script = r#"
+            local items = {"apple", "banana", "cherry"}
+            table.insert(items, "date")
+            transaction:set_tag("count", tostring(#items))
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Safe operations should work
+        assert_that!(result.len(), eq(1));
+        assert_that!(
+            result[0].tags.get::<String>(&"count".to_string()),
+            some(eq(&"4".to_string()))
+        );
     }
 }
