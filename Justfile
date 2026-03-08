@@ -29,5 +29,9 @@ test-coverage:
 update-test-snapshots:
     cargo insta test --workspace --accept --test-runner nextest
 
+clippy-to-file:
+    cargo clippy --tests --message-format=json | clippy-sarif > rust-clippy-results.sarif
+    python external/sarif-normalizer.py --in-place rust-clippy-results.sarif
+
 docs $RUSTDOCFLAGS="--cfg docsrs":
     cargo +{{nightly}} doc --no-deps --features all -p finance_as_code_budget

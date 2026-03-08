@@ -47,8 +47,11 @@ fn pulumi_main(ctx: &Context) -> Result<()> {
     let build_yaml_jobs =
         github_workflow::GitHubWorkflow::from_file("../../.github/workflows/ci.yml")?
             .get_job_full_names();
+    let rust_clippy_jobs =
+        github_workflow::GitHubWorkflow::from_file("../../.github/workflows/rust-clippy.yml")?
+            .get_job_full_names();
 
-    let all_jobs = [build_yaml_jobs].concat();
+    let all_jobs = [build_yaml_jobs, rust_clippy_jobs].concat();
 
     let pulumi_gestalt_checks: Vec<RepositoryRulesetRulesRequiredStatusChecksRequiredCheck> =
         all_jobs
