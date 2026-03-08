@@ -53,7 +53,7 @@ let transformer = create_ai_lua_builder(
     AiLuaConfig::builder()
         .name("categorize-food")
         .user_description(
-            "Set cateategory tag to 'Food' when description matches 'RESTAURANT' or 'CAFE', \
+            "Set category tag to 'Food' when description matches 'RESTAURANT' or 'CAFE', \
              and to 'Transport' when description matches 'UBER' or 'TAXI'",
         )
         .api_key("gemini_api_key")
