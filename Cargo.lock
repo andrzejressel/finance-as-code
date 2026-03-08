@@ -1451,6 +1451,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "finance_as_code_utils_file_map"
+version = "0.0.0-DEV"
+dependencies = [
+ "googletest",
+ "rootcause",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "finance_as_code_utils_gemini"
 version = "0.0.0-DEV"
 dependencies = [
