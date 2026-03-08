@@ -187,9 +187,8 @@ Generate the Lua script now:"#,
                 "Using cached Lua code for description: {}",
                 self.user_description
             );
-            let code = cached_code.to_string();
-            *lua_code_cell.borrow_mut() = Some(code.clone());
-            return Ok(code);
+            *lua_code_cell.borrow_mut() = Some(cached_code.clone());
+            return Ok(cached_code);
         }
 
         // Generate new code
