@@ -1,26 +1,30 @@
 #![doc = include_str!("../../../root/src/docs/lua-ai.md")]
 
 use bon::Builder;
-use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::transformer::Transformer;
+use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_transformer_lua::{DefaultLuaExecutor, LuaExecutor};
 use finance_as_code_utils_file_map::{FileStringMap, JsonFileMap};
 use finance_as_code_utils_gemini::{ContentGenerator, GeminiClient};
 use log::{debug, info, warn};
-use rootcause::Result;
 use rootcause::prelude::ResultExt;
+use rootcause::Result;
 use std::cell::RefCell;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Builder)]
 pub struct AiLuaConfig {
+    #[builder(into)]
     name: String,
+    #[builder(into)]
     user_description: String,
+    #[builder(into)]
     api_key: String,
+    #[builder(into)]
     cache_path: PathBuf,
 }
 
-fn create_ai_lua_builder(config: AiLuaConfig) -> Result<impl Transformer> {
+pub fn create_ai_lua_builder(config: AiLuaConfig) -> Result<impl Transformer> {
     let gemini_builder = GeminiClient::create(config.api_key);
     let cache = JsonFileMap::new(&config.cache_path)
         .context_with(|| format!("Failed to initialize cache at {:?}", config.cache_path))?;
@@ -31,7 +35,7 @@ fn create_ai_lua_builder(config: AiLuaConfig) -> Result<impl Transformer> {
         user_description: config.user_description,
         content_generator: gemini_builder,
         lua_executor,
-        cache,
+        cache: RefCell::new(cache),
         lua_code: RefCell::new(None),
     })
 }
@@ -47,7 +51,7 @@ pub struct AiLuaTransformer<G: ContentGenerator, E: LuaExecutor, KV: FileStringM
     user_description: String,
     content_generator: G,
     lua_executor: E,
-    cache: KV,
+    cache: RefCell<KV>,
     lua_code: RefCell<Option<String>>,
 }
 
@@ -180,7 +184,7 @@ Generate the Lua script now:"#,
         }
 
         // Try to get from cache
-        if let Some(cached_code) = self.cache.get(&self.user_description) {
+        if let Some(cached_code) = self.cache.borrow().get(&self.user_description) {
             debug!(
                 "Using cached Lua code for description: {}",
                 self.user_description
@@ -199,6 +203,7 @@ Generate the Lua script now:"#,
 
         // Cache the generated code
         self.cache
+            .borrow_mut()
             .put(&self.user_description, &lua_code)
             .context("Failed to cache generated Lua code")?;
 
@@ -240,30 +245,33 @@ mod tests {
     use chrono::NaiveDate;
     use finance_as_code_budget_core::TagMap;
     use finance_as_code_budget_transformer_lua::MockLuaExecutor;
-    use finance_as_code_utils_file_map::MockFileStringMap;
     use finance_as_code_utils_gemini::MockContentGenerator;
     use googletest::assert_that;
     use googletest::prelude::eq;
     use googletest::prelude::some;
-    use rusty_money::Money;
     use rusty_money::iso::USD;
+    use rusty_money::Money;
+    use std::path::Path;
     use tempfile::NamedTempFile;
     use uuid::Uuid;
 
-    type MockAiLuaTransformer =
-        AiLuaTransformer<MockContentGenerator, MockLuaExecutor, MockFileStringMap>;
+    type MockAiLuaTransformer = AiLuaTransformer<MockContentGenerator, MockLuaExecutor, JsonFileMap>;
 
     fn create_transformer_with_mocks(
+        name: &str,
+        user_description: &str,
         mock_generator: MockContentGenerator,
         mock_executor: MockLuaExecutor,
-        mock_cache: MockFileStringMap,
+        cache_path: &Path,
     ) -> MockAiLuaTransformer {
+        let cache = JsonFileMap::new(cache_path).unwrap();
+
         MockAiLuaTransformer {
-            name: "test-transformer".to_string(),
-            user_description: "test description".to_string(),
+            name: name.to_string(),
+            user_description: user_description.to_string(),
             content_generator: mock_generator,
             lua_executor: mock_executor,
-            cache: mock_cache,
+            cache: RefCell::new(cache),
             lua_code: RefCell::new(None),
         }
     }
@@ -282,23 +290,17 @@ mod tests {
 
     #[test]
     fn transformer_returns_configured_name() {
-        let mut mock_generator = MockContentGenerator::new();
-        let mut mock_executor = MockLuaExecutor::new();
-        let mut mock_cache = MockFileStringMap::new();
-
         let temp_file = NamedTempFile::new().unwrap();
-        let cache_path = temp_file.path().to_path_buf();
-
         let mock_generator = MockContentGenerator::new();
         let mock_executor = MockLuaExecutor::new();
 
-        let transformer = AiLuaTransformerBuilder::builder()
-            .name("test-ai-transformer".to_string())
-            .user_description("test description".to_string())
-            .api_key("test_key".to_string())
-            .cache_path(cache_path)
-            .build_with(mock_generator, mock_executor)
-            .unwrap();
+        let transformer = create_transformer_with_mocks(
+            "test-ai-transformer",
+            "test description",
+            mock_generator,
+            mock_executor,
+            temp_file.path(),
+        );
 
         assert_that!(transformer.name(), eq("test-ai-transformer"));
     }
@@ -332,15 +334,13 @@ mod tests {
                 vec![tx]
             });
 
-        let transformer = AiLuaTransformerBuilder::builder()
-            .name("test-cached".to_string())
-            .user_description(
-                "if description contains 'Walmart' then category is 'Grocery'".to_string(),
-            )
-            .api_key("test_key".to_string())
-            .cache_path(cache_path)
-            .build_with(mock_generator, mock_executor)
-            .unwrap();
+        let transformer = create_transformer_with_mocks(
+            "test-cached",
+            "if description contains 'Walmart' then category is 'Grocery'",
+            mock_generator,
+            mock_executor,
+            &cache_path,
+        );
 
         let tx = create_test_transaction();
         let result = transformer.transform(tx);
@@ -377,13 +377,13 @@ mod tests {
                 vec![tx]
             });
 
-        let transformer = AiLuaTransformer::builder()
-            .name("test-api")
-            .description("if description contains 'Walmart' then category is 'Grocery'")
-            .api_key("test_key")
-            .cache_path(cache_path)
-            .build_with(mock_generator, mock_executor)
-            .unwrap();
+        let transformer = create_transformer_with_mocks(
+            "test-api",
+            "if description contains 'Walmart' then category is 'Grocery'",
+            mock_generator,
+            mock_executor,
+            &cache_path,
+        );
 
         let tx = create_test_transaction();
         let result = transformer.transform(tx);
@@ -419,13 +419,13 @@ mod tests {
                 vec![tx]
             });
 
-        let transformer = AiLuaTransformer::builder()
-            .name("test-clean")
-            .description("add test tag")
-            .api_key("test_key")
-            .cache_path(cache_path)
-            .build_with(mock_generator, mock_executor)
-            .unwrap();
+        let transformer = create_transformer_with_mocks(
+            "test-clean",
+            "add test tag",
+            mock_generator,
+            mock_executor,
+            &cache_path,
+        );
 
         let tx = create_test_transaction();
         let result = transformer.transform(tx);
@@ -461,13 +461,13 @@ mod tests {
                 vec![tx]
             });
 
-        let transformer = AiLuaTransformer::builder()
-            .name("test-memory-cache")
-            .description("add cached tag")
-            .api_key("test_key")
-            .cache_path(cache_path)
-            .build_with(mock_generator, mock_executor)
-            .unwrap();
+        let transformer = create_transformer_with_mocks(
+            "test-memory-cache",
+            "add cached tag",
+            mock_generator,
+            mock_executor,
+            &cache_path,
+        );
 
         let tx1 = create_test_transaction();
         let tx2 = create_test_transaction();
@@ -492,13 +492,13 @@ mod tests {
             .times(1)
             .returning(|_| Err(rootcause::report!("API error")));
 
-        let transformer = AiLuaTransformer::builder()
-            .name("test-error")
-            .description("test description")
-            .api_key("test_key")
-            .cache_path(cache_path)
-            .build_with(mock_generator, mock_executor)
-            .unwrap();
+        let transformer = create_transformer_with_mocks(
+            "test-error",
+            "test description",
+            mock_generator,
+            mock_executor,
+            &cache_path,
+        );
 
         let tx = create_test_transaction();
         let result = transformer.transform(tx);

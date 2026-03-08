@@ -39,7 +39,7 @@ pub trait FileStringMap {
 /// let mut map = JsonFileMap::new(&path).unwrap();
 ///
 /// let _ = map.put("name", "Alice");
-/// assert_eq!(map.get("name"), Some("Alice"));
+/// assert_eq!(map.get("name"), Some("Alice".to_string()));
 /// assert_eq!(map.get("unknown"), None);
 /// ```
 pub struct JsonFileMap {

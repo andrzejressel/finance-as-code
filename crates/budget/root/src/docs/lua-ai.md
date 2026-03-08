@@ -1,265 +1,111 @@
 # AI-Powered Lua Transformer
 
-This module provides [`AiLuaTransformer`] that uses AI (Google Gemini) to generate Lua scripts from natural language descriptions, allowing you to categorize and transform transactions using plain English rules.
+This module provides [`transformer_ai_lua::AiLuaTransformer`] that translates **natural language descriptions** into Lua scripts using the Gemini AI API and executes them against financial transactions — no Lua knowledge required.
 
-The generated Lua code is automatically cached, so subsequent transformations with the same description don't require additional API calls.
+Generated Lua code is cached on disk (keyed by your description), so repeat runs skip the API call entirely.
 
 ## Quick Start
 
-```rust
-use finance_as_code_budget_transformer_ai_lua::AiLuaTransformer;
-use finance_as_code_budget_core::transformer::Transformer;
+```rust,no_run,ignore
+use finance_as_code_budget::run;
+# use finance_as_code_budget::__private::{create_sink, create_source};
+use finance_as_code_budget_transformer_ai_lua::{AiLuaConfig, create_ai_lua_builder};
+use std::path::PathBuf;
 
-// Create a transformer that categorizes transactions based on description
-let transformer = AiLuaTransformer::builder()
-    .name("grocery-categorizer")
-    .description("if transaction description contains 'Walmart' then set category tag to 'Grocery'")
-    .api_key("your-gemini-api-key")
-    .build()
-    .unwrap();
+fn main() {
+    let transformer = create_ai_lua_builder(
+        AiLuaConfig::builder()
+            .name("auto-categorize")
+            .user_description("If description contains 'Walmart', set category tag to 'Grocery'")
+            .api_key("gemini_api_key")
+            .cache_path(PathBuf::from(".cache/lua"))
+            .build(),
+    )
+    .expect("Failed to create AI Lua transformer");
 
-// Use it in your transformer pipeline
-let transactions = vec![/* your transactions */];
-let transformed: Vec<_> = transactions
-    .into_iter()
-    .flat_map(|tx| transformer.transform(tx))
-    .collect();
+    let sources = vec![create_source()];
+    let sinks = vec![create_sink()];
+
+    run(vec![], sources, vec![Box::new(transformer)], sinks).expect("Pipeline run failed");
+}
 ```
 
 ## How It Works
 
-1. **You provide a natural language description** of the transformation rule (e.g., "if description contains 'Walmart' then category is 'Grocery'")
-2. **AI generates Lua code** that implements your rule using the Gemini API
-3. **Code is cached** locally using the description as the key
-4. **Lua code is executed** on each transaction using the existing Lua transformer
+On first use, the transformer:
 
-## Caching
+1. Sends your `user_description` plus the full [Lua API reference](crate::lua) to the Gemini AI
+2. Receives generd Lua code back
+3. Caches the code to `cache_path` (JSON file, keyed by description)
+4. Executes the Lua code on each transaction
 
-The generated Lua code is cached in two places:
-
-1. **In-memory**: For fastest access during the current session
-2. **On-disk**: JSON file (default: `.ai-lua-cache.json`) for persistence across runs
-
-This means:
-- First transformation with a description calls the Gemini API
-- Subsequent transformations (even after restart) use the cached code
-- No API calls are made for cached descriptions
-
-### Custom Cache Location
-
-```rust
-use std::path::PathBuf;
-
-let transformer = AiLuaTransformer::builder()
-    .name("categorizer")
-    .description("if description contains 'UBER' then category is 'Transport'")
-    .api_key("your-api-key")
-    .cache_path(PathBuf::from("./my-cache.json"))
-    .build()
-    .unwrap();
-```
+On subsequent runs the AI call is skipped — the cached Lua is loaded from disk instead.
 
 ## Examples
 
-### Categorize grocery transactions
+### Categorise by description
 
-```rust
-use finance_as_code_budget_transformer_ai_lua::AiLuaTransformer;
-use finance_as_code_budget_core::transformer::Transformer;
+```rust,no_run
+use finance_as_code_budget_transformer_ai_lua::{AiLuaConfig, create_ai_lua_builder};
+use std::path::PathBuf;
 
-let transformer = AiLuaTransformer::builder()
-    .name("grocery")
-    .description("if description contains 'Walmart', 'Target', or 'Costco' then set category tag to 'Groceries'")
-    .api_key("your-api-key")
-    .build()
-    .unwrap();
-```
-
-### Categorize transportation
-
-```rust
-let transformer = AiLuaTransformer::builder()
-    .name("transport")
-    .description("if description contains 'UBER', 'LYFT', or 'TAXI' then set category tag to 'Transportation'")
-    .api_key("your-api-key")
-    .build()
-    .unwrap();
+let transformer = create_ai_lua_builder(
+    AiLuaConfig::builder()
+        .name("categorize-food")
+        .user_description(
+            "Set cateategory tag to 'Food' when description matches 'RESTAURANT' or 'CAFE', \
+             and to 'Transport' when description matches 'UBER' or 'TAXI'",
+        )
+        .api_key("gemini_api_key")
+        .cache_path(PathBuf::from(".cache/lua"))
+        .build(),
+)
+.expect("Failed to create transformer");
 ```
 
 ### Filter out internal transfers
 
-```rust
-let transformer = AiLuaTransformer::builder()
-    .name("filter-internal")
-    .description("remove transactions that contain 'INTERNAL TRANSFER' in description")
-    .api_key("your-api-key")
-    .build()
-    .unwrap();
+```rust,no_run
+use finance_as_code_budget_transformer_ai_lua::{AiLuaConfig, create_ai_lua_builder};
+use std::path::PathBuf;
+
+let transformer = create_ai_lua_builder(
+    AiLuaConfig::builder()
+        .name("drop-internal")
+        .user_description("Drop any transaction whose description contains 'INTERNAL TRANSFER'")
+        .api_key("gemini_api_key")
+        .cache_path(PathBuf::from(".cache/lua"))
+        .build(),
+)
+.expect("Failed to create transformer");
 ```
 
-### Add processed tag to all transactions
+### Rename counterparty
 
-```rust
-let transformer = AiLuaTransformer::builder()
-    .name("add-processed-tag")
-    .description("add a tag 'processed' with value 'true' to every transaction")
-    .api_key("your-api-key")
-    .build()
-    .unwrap();
-```
+```rust,no_run
+use finance_as_code_budget_transformer_ai_lua::{AiLuaConfig, create_ai_lua_builder};
+use std::path::PathBuf;
 
-### Complex categorization
-
-```rust
-let transformer = AiLuaTransformer::builder()
-    .name("smart-categorizer")
-    .description("
-        categorize transactions based on description:
-        - 'SHELL', 'BP', 'CHEVRON' -> category: 'Fuel'
-        - 'STARBUCKS', 'MCDONALDS' -> category: 'Dining'
-        - 'NETFLIX', 'SPOTIFY' -> category: 'Entertainment'
-        - 'AMAZON' -> category: 'Shopping'
-    ")
-    .api_key("your-api-key")
-    .build()
-    .unwrap();
-```
-
-## Using Custom Gemini Endpoint
-
-If you want to use a custom Gemini endpoint (e.g., for testing or self-hosted models):
-
-```rust
-let transformer = AiLuaTransformer::builder()
-    .name("test-transformer")
-    .description("add test tag")
-    .api_key("your-api-key")
-    .base_url("https://your-custom-endpoint.com")
-    .build()
-    .unwrap();
-```
-
-## Full Pipeline Example
-
-```rust
-use finance_as_code_budget::{
-    LocalDirectorySource, Setup, Sink, Source, Transformer,
-    lunchflow::{
-        LunchFlowDownloaderConfig, create_lunchflow_downloader, create_lunchflow_file_reader,
-    },
-    lunchmoney::{LunchMoneySinkConfig, create_lunchmoney_sink},
-    transformer_ai_lua::AiLuaTransformer,
-    run,
-};
-
-fn main() {
-    let lunchflow_dir = "path/to/lunchflow/dir";
-
-    // Create AI-powered transformers
-    let grocery_transformer = AiLuaTransformer::builder()
-        .name("grocery-categorizer")
-        .description("if description contains 'Walmart' or 'Target' then set category tag to 'Groceries'")
-        .api_key("your-gemini-api-key")
-        .build()
-        .unwrap();
-
-    let transport_transformer = AiLuaTransformer::builder()
-        .name("transport-categorizer")
-        .description("if description contains 'UBER' or 'LYFT' then set category tag to 'Transport'")
-        .api_key("your-gemini-api-key")
-        .build()
-        .unwrap();
-
-    let transformers: Vec<Box<dyn Transformer>> = vec![
-        Box::new(grocery_transformer),
-        Box::new(transport_transformer),
-    ];
-
-    let setups: Vec<Box<dyn Setup>> = vec![
-        Box::new(create_lunchflow_downloader(
-            LunchFlowDownloaderConfig::builder()
-                .account_id(123_i64)
-                .api_key("lunchflow_api_key")
-                .local_directory(lunchflow_dir)
-                .build(),
+let transformer = create_ai_lua_builder(
+    AiLuaConfig::builder()
+        .name("normalize-names")
+        .user_description(
+            "Replace counterparty with 'Amazon' when description starts with 'AMZN', \
+             and with 'Netflix' when counterparty contains 'NFLX'",
         )
-        .expect("Failed to create Lunch Flow downloader")),
-    ];
-
-    let sources: Vec<Box<dyn Source>> = vec![
-        Box::new(LocalDirectorySource::new(
-            lunchflow_dir,
-            create_lunchflow_file_reader(),
-        )
-        .expect("Failed to create local directory source")),
-    ];
-
-    let sinks: Vec<Box<dyn Sink>> = vec![Box::new(create_lunchmoney_sink(
-        LunchMoneySinkConfig::builder()
-            .api_key("lunchmoney_api_key")
-            .account_name("My Account")
-            .build(),
-    ))];
-
-    run(setups, sources, transformers, sinks).expect("Pipeline run failed");
-}
+        .api_key("gemini_api_key")
+        .cache_path(PathBuf::from(".cache/lua"))
+        .build(),
+)
+.expect("Failed to create transformer");
 ```
 
-## Lua API (Generated Code)
+## Caching Behaviour
 
-The AI generates Lua code that has access to these transaction fields and methods:
-
-### Read-only fields:
-- `transaction.id` - UUID as string
-- `transaction.date` - Date as string
-- `transaction.amount` - Amount as string
-- `transaction.currency` - Currency code as string
-
-### Read-write fields:
-- `transaction.description` - Transaction description (string)
-- `transaction.counterparty` - The other party (string)
-
-### Methods:
-- `transaction:get_tag(key)` - Get tag value by key, returns string or nil
-- `transaction:set_tag(key, value)` - Set a tag with key and value (both strings)
-- `transaction:split()` - Create a copy of the transaction (without tags)
-
-### Return values:
-- Return nothing → modified `transaction` is used
-- Return `nil` → transaction is dropped (filtered out)
-- Return single transaction → that transaction is used
-- Return `{tx1, tx2, ...}` → multiple transactions
+The cache is a JSON file at `cache_path`. The **description string is the cache key** — changing even one character triggers a new AI call and replaces the cached entry. Delete the file to force regeneration.
 
 ## Error Handling
 
-If the Gemini API fails or generates invalid Lua code:
-- An error is logged
-- An empty vector is returned for that transaction
-- The transaction is effectively dropped
+If the Gemini API call fails (network error, quota exceeded, invalid key), the transformer logs a warning and returns an empty `Vec` for that transaction — it does not panic.
 
-For production use, consider:
-1. Testing your descriptions thoroughly before deploying
-2. Caching generated code (done automatically)
-3. Having fallback transformers for critical rules
-
-## API Key
-
-Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-
-## Cost Considerations
-
-- First transformation with each unique description calls the API
-- Cached descriptions don't incur API costs
-- Use specific, reusable descriptions to minimize API calls
-
-## Limitations
-
-1. **AI-generated code may not be perfect** - Always test your transformations
-2. **Requires internet connection** for first-time code generation
-3. **Rate limits** apply based on your Gemini API plan
-4. **Description must be clear** - Ambiguous descriptions may generate incorrect code
-
-## See Also
-
-- [`LuaTransformer`](lua.md) - Direct Lua scripting without AI
-- [`GeminiClient`](../utils/gemini/) - Low-level Gemini API client
+If the generated Lua has a syntax or runtime error, the same empty-vector behaviour applies (identical to [`crate::lua::LuaTransformer`]).
