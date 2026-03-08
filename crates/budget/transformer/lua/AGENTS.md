@@ -10,6 +10,7 @@ This crate provides a Lua-based transaction transformer, allowing users to modif
 - **`os` library** — OS operations are blocked (no `os.execute`, `os.remove`, `os.rename`, etc.)
 - **`package` library** — Package loading is blocked (no `package.loadlib`, `require` with C modules, etc.)
 - **`debug` library** — Debug introspection is blocked (no `debug.getinfo`, etc.)
+- **`coroutine` library** — Coroutine operations are blocked (no `coroutine.create`, `coroutine.resume`, etc.)
 
 **Allowed safe libraries**:
 
@@ -17,7 +18,6 @@ This crate provides a Lua-based transaction transformer, allowing users to modif
 - **`string`** — String operations (upper, lower, sub, gsub, match, etc.)
 - **`math`** — Mathematical functions (floor, ceil, abs, sin, cos, etc.)
 - **`utf8`** — UTF-8 string operations
-- **`coroutine`** — Coroutine support for advanced control flow
 
 This prevents Lua scripts from performing file I/O, executing system commands, loading external code, or bypassing security measures. All security restrictions are enforced at the mlua level and cannot be bypassed from Lua code.
 

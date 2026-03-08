@@ -109,14 +109,13 @@ impl Transformer for LuaTransformer {
     }
 
     fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
-        // Create a safe Lua environment without IO, OS, PACKAGE, and DEBUG libraries
+        // Create a safe Lua environment without IO, OS, PACKAGE, DEBUG, and COROUTINE libraries
         // This prevents scripts from performing file I/O, executing system commands,
-        // loading packages, or using debug introspection.
+        // loading packages, using debug introspection, or creating coroutines.
         let safe_libs = StdLib::TABLE
             | StdLib::STRING
             | StdLib::MATH
-            | StdLib::UTF8
-            | StdLib::COROUTINE;
+            | StdLib::UTF8;
 
         let lua = Lua::new_with(safe_libs, LuaOptions::default())
             .expect("Failed to create safe Lua environment");
@@ -368,6 +367,22 @@ mod tests {
     fn transformer_blocks_debug_getinfo() {
         let script = r#"
             debug.getinfo(1)
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Script should fail and return empty vector
+        assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn transformer_blocks_coroutine_create() {
+        let script = r#"
+            local co = coroutine.create(function()
+                return transaction
+            end)
         "#;
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
