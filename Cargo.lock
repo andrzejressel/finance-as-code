@@ -1252,6 +1252,7 @@ dependencies = [
  "finance_as_code_budget_sink_treeline",
  "finance_as_code_budget_source_lunchflow",
  "finance_as_code_budget_source_mbank",
+ "finance_as_code_budget_transformer_lua",
 ]
 
 [[package]]
