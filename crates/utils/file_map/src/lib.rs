@@ -100,7 +100,7 @@ impl JsonFileMap {
         let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
         let empty_data = FileData::default();
-        serde_json::to_writer(&mut writer, &empty_data)?;
+        serde_json::to_writer_pretty(&mut writer, &empty_data)?;
         writer.flush()?;
         Ok(())
     }
@@ -123,7 +123,7 @@ impl JsonFileMap {
         let data = FileData {
             data: self.cache.clone(),
         };
-        serde_json::to_writer(&mut writer, &data)?;
+        serde_json::to_writer_pretty(&mut writer, &data)?;
         writer.flush()?;
         Ok(())
     }
@@ -283,5 +283,23 @@ mod tests {
         // Re-load to check persistence
         let map2 = JsonFileMap::new(path).unwrap();
         assert_that!(map2.get("foo"), some(eq("bar")));
+    }
+
+    #[test]
+    fn persists_pretty_printed_json() {
+        let (temp_file, mut map) = create_temp_map();
+
+        map.put("name", "Alice").unwrap();
+        map.put("age", "30").unwrap();
+
+        // Read file contents directly to verify pretty-printing
+        let contents = fs::read_to_string(temp_file.path()).unwrap();
+
+        // Verify it's valid JSON
+        let _: serde_json::Value = serde_json::from_str(&contents).unwrap();
+
+        // Verify it's pretty-printed (contains newlines and indentation)
+        assert_that!(contents.contains('\n'), is_true());
+        assert_that!(contents.contains("  "), is_true()); // 2-space indentation
     }
 }

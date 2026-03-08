@@ -12,6 +12,8 @@ File-backed string-to-string map with in-memory caching. Uses JSON for persisten
 
 **Parent directories created automatically**: If the parent directory of the file path does not exist, it is created automatically.
 
+**Pretty-printed JSON output**: JSON files are written with pretty-printing (formatted with newlines and 2-space indentation) to make them easier to read and debug. The library can read both compact and pretty-printed JSON files for backwards compatibility.
+
 ## Usage pattern
 
 ```rust
