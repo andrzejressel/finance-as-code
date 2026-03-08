@@ -1,19 +1,11 @@
-# Lua Transformer
+# budget/transformer/lua — Agents Guide
 
-This crate provides a Lua-based transaction transformer for the finance-as-code pipeline.
+This crate provides a Lua-based transaction transformer, allowing users to modify, filter, or split transactions at runtime using Lua scripts without recompiling the Rust pipeline.
 
-## Current Implementation
+## Non-obvious behaviour
 
-This is a minimal implementation that satisfies the `Transformer` trait. The transformer currently passes transactions through unchanged. Actual Lua script execution logic will be implemented in future iterations.
+**Irrecoverable errors**: If a Lua script fails (syntax error or runtime panic), the transformer returns an **empty vector**, effectively dropping the transaction. Due to ownership rules, the original transaction cannot be recovered once passed to the Lua engine.
 
-## Dependencies
+**`split()` tag behavior**: When a transaction is split within Lua, the resulting copy has a **new UUID** and **no tags**. Tags are not preserved during a split because the underlying `HMap` is not clonable.
 
-- **mlua** — provides Lua bindings for Rust
-- **finance_as_code_budget_core** — for the `Transformer` trait and `Transaction` type
-
-## Future Work
-
-- Implement Lua script execution
-- Add script loading from files or strings
-- Provide a Lua API for accessing and modifying transaction fields
-- Add error handling for Lua runtime errors
+**Amount representation**: Amounts are exposed to Lua as **strings** to maintain decimal precision and avoid floating-point issues during script execution.
