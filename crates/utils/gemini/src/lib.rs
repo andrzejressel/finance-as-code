@@ -65,7 +65,7 @@ impl GeminiClient {
                 .to_string())
         })
     }
-    
+
     fn create_auth_resolver(api_key: String) -> AuthResolver {
         AuthResolver::from_resolver_fn(move |model_iden: ModelIden| {
             if matches!(model_iden.adapter_kind, AdapterKind::Gemini) {
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn test_generate_content() {
         let server = MockServer::start();
-        
+
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::POST);
             then.status(200)
