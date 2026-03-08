@@ -1,19 +1,27 @@
 use genai::adapter::AdapterKind;
-use genai::chat::{ChatMessage, ChatRequest};
+use genai::chat::ChatResponseFormat::JsonSpec as JsonSpecEnum;
+use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::resolver::{AuthData, AuthResolver, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget};
+use rootcause::Result;
+use rootcause::option_ext::OptionExt;
+use rootcause::prelude::ResultExt;
+use schemars::{JsonSchema, schema_for};
+use serde::de::DeserializeOwned;
 
 /// Trait for generating content using AI.
 ///
 /// This trait allows mocking the AI client in tests.
 #[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait ContentGenerator {
-    /// Generates content from a prompt and returns the response as a string.
+    /// Generates typed content from a system prompt and user prompt.
     ///
     /// # Errors
     ///
     /// Returns an error if the API call fails or the response is invalid.
-    fn generate_content(&self, prompt: &str) -> rootcause::Result<String>;
+    fn generate_content<T>(&self, system_prompt: &str, user_prompt: &str) -> rootcause::Result<T>
+    where
+        T: JsonSchema + DeserializeOwned + 'static;
 }
 
 /// Client for interacting with the Google Gemini API using the `genai` crate.
@@ -52,31 +60,58 @@ impl GeminiClient {
             client: builder.build(),
         }
     }
+
+    async fn send_gemini_request<T>(&self, req: ChatRequest) -> Result<T>
+    where
+        T: JsonSchema + DeserializeOwned,
+    {
+        let schema = schema_for!(T);
+        let json_spec = JsonSpec::new(
+            "output_schema",
+            serde_json::to_value(&schema).context("Failed to convert JSON schema to value")?,
+        );
+
+        let res = self
+            .client
+            .exec_chat(
+                "gemini-2.5-flash",
+                req,
+                Some(&ChatOptions::default().with_response_format(JsonSpecEnum(json_spec))),
+            )
+            .await
+            .into_report()
+            .context("Failed to execute gemini-2.5-flash")?;
+
+        let response_text = res
+            .first_text()
+            .context("Gemini response did not contain any text content")?;
+
+        let result = serde_json::from_str::<T>(response_text).context_with(|| {
+            format!(
+                "Failed to deserialize Gemini JSON response into requested type. Response: {}",
+                response_text
+            )
+        })?;
+        Ok(result)
+    }
 }
 
 impl ContentGenerator for GeminiClient {
-    fn generate_content(&self, prompt: &str) -> rootcause::Result<String> {
-        let req = ChatRequest::new(vec![ChatMessage::user(prompt)]);
+    fn generate_content<T>(&self, system_prompt: &str, user_prompt: &str) -> Result<T>
+    where
+        T: JsonSchema + DeserializeOwned,
+    {
+        let req = ChatRequest::new(vec![
+            ChatMessage::system(system_prompt),
+            ChatMessage::user(user_prompt),
+        ]);
 
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .map_err(|e| rootcause::report!("Failed to create tokio runtime: {}", e))?;
 
-        rt.block_on(async {
-            let res = self
-                .client
-                .exec_chat("gemini-2.5-flash", req, None)
-                .await
-                .map_err(|e| {
-                    rootcause::report!("Failed to execute Gemini request via genai: {}", e)
-                })?;
-
-            Ok(res
-                .first_text()
-                .ok_or_else(|| rootcause::report!("No content in Gemini response"))?
-                .to_string())
-        })
+        rt.block_on(async { self.send_gemini_request(req).await })
     }
 }
 
@@ -95,7 +130,14 @@ mod tests {
     use super::*;
     use googletest::prelude::*;
     use httpmock::MockServer;
+    use schemars::JsonSchema;
+    use serde::Deserialize;
     use serde_json::json;
+
+    #[derive(Debug, Deserialize, JsonSchema, PartialEq, Eq)]
+    struct TestResponse {
+        value: String,
+    }
 
     #[test]
     fn test_generate_content() {
@@ -108,7 +150,7 @@ mod tests {
                 .json_body(json!({
                     "candidates": [{
                         "content": {
-                            "parts": [{"text": "world"}],
+                            "parts": [{"text": "{\"value\":\"world\"}"}],
                             "role": "model"
                         }
                     }]
@@ -116,9 +158,14 @@ mod tests {
         });
 
         let client = GeminiClient::create_with_base_url("test_key".to_string(), server.base_url());
-        let response = client.generate_content("hello").unwrap();
+        let response: TestResponse = client.generate_content("you are helpful", "hello").unwrap();
 
-        assert_that!(response, eq("world"));
+        assert_that!(
+            &response,
+            eq(&TestResponse {
+                value: "world".to_string()
+            })
+        );
         mock.assert();
     }
 }

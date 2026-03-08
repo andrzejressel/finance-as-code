@@ -11,11 +11,12 @@ mock = ["mockall"]
 genai.workspace = true
 tokio.workspace = true
 serde_json.workspace = true
-anyhow.workspace = true
-bon.workspace = true
+serde.workspace = true
+schemars.workspace = true
 rootcause.workspace = true
 mockall = { workspace = true, optional = true }
 
 [dev-dependencies]
 googletest.workspace = true
 httpmock.workspace = true
+mockall.workspace = true
