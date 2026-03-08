@@ -9,3 +9,5 @@ This crate provides a Lua-based transaction transformer, allowing users to modif
 **`split()` tag behavior**: When a transaction is split within Lua, the resulting copy has a **new UUID** and **no tags**. Tags are not preserved during a split because the underlying `HMap` is not clonable.
 
 **Amount representation**: Amounts are exposed to Lua as **strings** to maintain decimal precision and avoid floating-point issues during script execution.
+
+**Documentation**: When changing internal logic, also change the documentation. It is referenced on top of `lib.rs`
