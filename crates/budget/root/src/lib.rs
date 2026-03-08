@@ -43,6 +43,11 @@ pub mod treeline {
     pub use finance_as_code_budget_sink_treeline::create_treeline_sink;
 }
 
+#[doc = include_str!("docs/lua.md")]
+pub mod lua {
+    pub use finance_as_code_budget_transformer_lua::LuaTransformer;
+}
+
 #[cfg(feature = "sink_lunchmoney")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
 #[doc = include_str!("docs/lunchmoney.md")]
