@@ -264,4 +264,22 @@ mod tests {
 
         assert_that!(result.is_err(), is_true());
     }
+    #[test]
+    fn handles_empty_existing_file() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        // Create an empty file.
+        fs::write(path, "").unwrap();
+
+        let mut map = JsonFileMap::new(path).unwrap();
+        assert_that!(map.get("any"), none());
+
+        map.put("foo", "bar").unwrap();
+        assert_that!(map.get("foo"), some(eq("bar")));
+
+        // Re-load to check persistence
+        let map2 = JsonFileMap::new(path).unwrap();
+        assert_that!(map2.get("foo"), some(eq("bar")));
+    }
 }
