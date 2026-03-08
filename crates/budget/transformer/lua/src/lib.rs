@@ -6,6 +6,7 @@ use mlua::UserDataFields;
 use mlua::UserDataMethods;
 use std::cell::RefCell;
 
+
 /// A Lua-based transaction transformer.
 pub struct LuaTransformer {
     name: String,
