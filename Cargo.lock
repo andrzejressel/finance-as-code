@@ -1246,6 +1246,7 @@ dependencies = [
 name = "finance_as_code_budget"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "duckdb",
  "finance_as_code_budget_core",
  "finance_as_code_budget_sink_lunchmoney",
@@ -1253,6 +1254,9 @@ dependencies = [
  "finance_as_code_budget_source_lunchflow",
  "finance_as_code_budget_source_mbank",
  "finance_as_code_budget_transformer_lua",
+ "finance_as_code_utils_hmap",
+ "rusty-money",
+ "uuid",
 ]
 
 [[package]]
