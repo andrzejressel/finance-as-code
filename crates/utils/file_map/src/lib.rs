@@ -71,9 +71,10 @@ impl JsonFileMap {
 
         // Ensure parent directory exists
         if let Some(parent) = path.parent()
-            && !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
+            && !parent.exists()
+        {
+            fs::create_dir_all(parent)?;
+        }
 
         let cache = if path.exists() {
             // Check if file is empty
