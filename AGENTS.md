@@ -74,6 +74,7 @@ finance-as-code/
 │   │       └── lua/         # Transformer: Lua-based transaction transformer (WIP)
 │   └── utils/
 │       ├── chrono/          # Utility macros: date!() and datetime!() literals
+│       ├── file_map/        # Utility file-backed string-to-string map with caching
 │       ├── hmap/            # Utility runtime heterogeneous map (Any-backed)
 │       └── resilience/      # Utility retry helpers (exponential backoff)
 └── setup/
@@ -83,6 +84,16 @@ finance-as-code/
 Each directory contains own AGENTS.md with crate-specific details. If work is done on a specific crate, check its AGENTS.md for any additional instructions or conventions.
 
 Before searching in Google for any information check the AGENTS.md files for the relevant crate. If you find that some information is missing, please add it to the AGENTS.md file of the relevant crate.
+
+## Creating New Modules
+
+When creating a new module (crate), you **must** create an `AGENTS.md` file in the crate's root directory. The file should follow the style of existing `AGENTS.md` files:
+
+- Start with `# <crate_path> — Agents Guide` as the title
+- Include a brief description of the crate's purpose
+- Add a `## Non-obvious behaviour` section documenting any surprising or non-intuitive behavior
+- Add additional sections as needed (e.g., `## Usage pattern`, `## Configuration`)
+- Keep it concise and focused on information that helps agents work with the crate
 
 ### Architecture
 
