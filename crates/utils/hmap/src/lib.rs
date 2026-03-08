@@ -213,7 +213,7 @@ where
     K: Eq + Hash + Clone,
 {
     fn clone(&self) -> Self {
-        let mut cloned_values = HashMap::new();
+        let mut cloned_values = HashMap::with_capacity(self.values.len());
         for (k, v) in &self.values {
             cloned_values.insert(k.clone(), v.as_ref().clone_boxed());
         }
