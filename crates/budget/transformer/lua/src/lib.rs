@@ -3,6 +3,8 @@
 use finance_as_code_budget_core::Transaction;
 use finance_as_code_budget_core::transformer::Transformer;
 use mlua::Lua;
+use mlua::LuaOptions;
+use mlua::StdLib;
 use mlua::UserData;
 use mlua::UserDataFields;
 use mlua::UserDataMethods;
@@ -148,10 +150,9 @@ impl UserData for LuaTransaction {
             Ok(())
         });
 
-        // Since we can't clone HMap, split() will create a new transaction with same
-        // fields but NO tags. This is a limitation of the current HMap design
-        // if we don't want to change it.
-        methods.add_method("split", |_, this, ()| {
+        // Clone creates a copy of the transaction with the same fields and tags
+        // but with a new unique ID
+        methods.add_method("clone", |_, this, ()| {
             let borrow = this.inner.borrow();
 
             let new_tx = Transaction {
@@ -161,7 +162,7 @@ impl UserData for LuaTransaction {
                 counterparty: borrow.counterparty.clone(),
                 amount: borrow.amount,
                 other_side_account_number: borrow.other_side_account_number.clone(),
-                tags: finance_as_code_utils_hmap::HMap::new(),
+                tags: borrow.tags.clone(),
             };
 
             Ok(LuaTransaction {
@@ -187,8 +188,66 @@ impl Transformer for LuaTransformer {
     }
 
     fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
-        let executor = DefaultLuaExecutor;
-        executor.execute(&self.name, &self.script, transaction)
+        // Create a safe Lua environment without IO, OS, PACKAGE, DEBUG, and COROUTINE
+        // libraries This prevents scripts from performing file I/O, executing
+        // system commands, loading packages, using debug introspection, or
+        // creating coroutines.
+        let safe_libs = StdLib::TABLE | StdLib::STRING | StdLib::MATH | StdLib::UTF8;
+
+        let lua = Lua::new_with(safe_libs, LuaOptions::default())
+            .expect("Failed to create safe Lua environment");
+
+        let result: mlua::Result<Vec<Transaction>> = (|| {
+            // We put the transaction in a global variable wrapped in LuaTransaction.
+            let lua_tx = LuaTransaction {
+                inner: RefCell::new(transaction),
+            };
+            lua.globals().set("transaction", lua_tx)?;
+
+            let result_multivalue: mlua::MultiValue = lua.load(&self.script).eval()?;
+
+            if result_multivalue.is_empty() {
+                // Script returned nothing, use global transaction
+                let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+                let lt = ud.take::<LuaTransaction>()?;
+                return Ok(vec![lt.inner.into_inner()]);
+            }
+
+            let result_value = result_multivalue.front().unwrap();
+
+            if result_value.is_nil() {
+                return Ok(vec![]);
+            }
+
+            if let Some(ud) = result_value.as_userdata() {
+                let lt = ud.take::<LuaTransaction>()?;
+                Ok(vec![lt.inner.into_inner()])
+            } else if let Some(table) = result_value.as_table() {
+                let mut txs = Vec::new();
+                for res in table.sequence_values::<mlua::Value>() {
+                    let val = res?;
+                    if let Some(ud) = val.as_userdata() {
+                        let lt = ud.take::<LuaTransaction>()?;
+                        txs.push(lt.inner.into_inner());
+                    }
+                }
+                Ok(txs)
+            } else {
+                let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+                let lt = ud.take::<LuaTransaction>()?;
+                Ok(vec![lt.inner.into_inner()])
+            }
+        })();
+
+        match result {
+            Ok(transactions) => transactions,
+            Err(e) => {
+                eprintln!("Lua transformation failed for {}: {:?}", self.name, e);
+                // We can't easily return original transaction here because it was moved.
+                // This is a trade-off for not having Clone.
+                vec![]
+            }
+        }
     }
 }
 
@@ -197,9 +256,7 @@ mod tests {
     use super::*;
     use chrono::NaiveDate;
     use finance_as_code_budget_core::TagMap;
-    use googletest::assert_that;
-    use googletest::prelude::eq;
-    use googletest::prelude::some;
+    use googletest::prelude::*;
     use rusty_money::Money;
     use rusty_money::iso::USD;
     use uuid::Uuid;
@@ -213,6 +270,56 @@ mod tests {
             amount: Money::from_major(100, USD),
             other_side_account_number: None,
             tags: TagMap::new(),
+        }
+    }
+
+    /// Helper function for testing that exposes the Result type.
+    /// This allows tests to verify that errors are actually thrown.
+    fn transform_with_result(
+        transformer: &LuaTransformer,
+        transaction: Transaction,
+    ) -> mlua::Result<Vec<Transaction>> {
+        let safe_libs = StdLib::TABLE | StdLib::STRING | StdLib::MATH | StdLib::UTF8;
+
+        let lua = Lua::new_with(safe_libs, LuaOptions::default())
+            .expect("Failed to create safe Lua environment");
+
+        let lua_tx = LuaTransaction {
+            inner: RefCell::new(transaction),
+        };
+        lua.globals().set("transaction", lua_tx)?;
+
+        let result_multivalue: mlua::MultiValue = lua.load(&transformer.script).eval()?;
+
+        if result_multivalue.is_empty() {
+            let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+            let lt = ud.take::<LuaTransaction>()?;
+            return Ok(vec![lt.inner.into_inner()]);
+        }
+
+        let result_value = result_multivalue.front().unwrap();
+
+        if result_value.is_nil() {
+            return Ok(vec![]);
+        }
+
+        if let Some(ud) = result_value.as_userdata() {
+            let lt = ud.take::<LuaTransaction>()?;
+            Ok(vec![lt.inner.into_inner()])
+        } else if let Some(table) = result_value.as_table() {
+            let mut txs = Vec::new();
+            for res in table.sequence_values::<mlua::Value>() {
+                let val = res?;
+                if let Some(ud) = val.as_userdata() {
+                    let lt = ud.take::<LuaTransaction>()?;
+                    txs.push(lt.inner.into_inner());
+                }
+            }
+            Ok(txs)
+        } else {
+            let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
+            let lt = ud.take::<LuaTransaction>()?;
+            Ok(vec![lt.inner.into_inner()])
         }
     }
 
@@ -248,7 +355,7 @@ mod tests {
     #[test]
     fn transformer_can_return_multiple_transactions() {
         let script = r#"
-            local tx2 = transaction:split()
+            local tx2 = transaction:clone()
             tx2.description = "Second"
             return {transaction, tx2}
         "#;
@@ -271,5 +378,258 @@ mod tests {
         let result = transformer.transform(tx);
 
         assert_that!(result.len(), eq(0));
+    }
+
+    #[test]
+    fn clone_preserves_tags() {
+        let script = r#"
+            transaction:set_tag("category", "food")
+            transaction:set_tag("source", "bank")
+            local tx2 = transaction:clone()
+            tx2.description = "Cloned"
+            tx2:set_tag("category", "drink")
+            return {transaction, tx2}
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        assert_that!(result.len(), eq(2));
+
+        // Original transaction
+        assert_that!(result[0].description.as_str(), eq("Test transaction"));
+        assert_that!(
+            result[0].tags.get::<String>(&"category".to_string()),
+            some(eq(&"food".to_string()))
+        );
+        assert_that!(
+            result[0].tags.get::<String>(&"source".to_string()),
+            some(eq(&"bank".to_string()))
+        );
+
+        // Cloned transaction should have inherited tags but modified category
+        assert_that!(result[1].description.as_str(), eq("Cloned"));
+        assert_that!(
+            result[1].tags.get::<String>(&"category".to_string()),
+            some(eq(&"drink".to_string()))
+        );
+        assert_that!(
+            result[1].tags.get::<String>(&"source".to_string()),
+            some(eq(&"bank".to_string()))
+        );
+    }
+
+    #[test]
+    fn transformer_blocks_io_open() {
+        let script = r#"
+            local f = io.open("/etc/passwd", "r")
+            if f then
+                f:close()
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'io' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("io"));
+    }
+
+    #[test]
+    fn transformer_blocks_io_write() {
+        let script = r#"
+            local f = io.open("/tmp/test.txt", "w")
+            if f then
+                f:write("malicious content")
+                f:close()
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'io' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("io"));
+    }
+
+    #[test]
+    fn transformer_blocks_io_popen() {
+        let script = r#"
+            local handle = io.popen("ls")
+            if handle then
+                handle:close()
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'io' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("io"));
+    }
+
+    #[test]
+    fn transformer_blocks_os_execute() {
+        let script = r#"
+            os.execute("echo 'malicious command'")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'os' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("os"));
+    }
+
+    #[test]
+    fn transformer_blocks_os_remove() {
+        let script = r#"
+            os.remove("/tmp/test.txt")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'os' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("os"));
+    }
+
+    #[test]
+    fn transformer_blocks_os_rename() {
+        let script = r#"
+            os.rename("/tmp/old.txt", "/tmp/new.txt")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'os' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("os"));
+    }
+
+    #[test]
+    fn transformer_blocks_package_loadlib() {
+        let script = r#"
+            package.loadlib("/lib/x86_64-linux-gnu/libc.so.6", "malloc")
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'package' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("package"));
+    }
+
+    #[test]
+    fn transformer_blocks_debug_getinfo() {
+        let script = r#"
+            debug.getinfo(1)
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'debug' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("debug"));
+    }
+
+    #[test]
+    fn transformer_blocks_coroutine_create() {
+        let script = r#"
+            local co = coroutine.create(function()
+                return transaction
+            end)
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transform_with_result(&transformer, tx);
+
+        // Should get an error about 'coroutine' being undefined
+        assert_that!(result.is_err(), eq(true));
+        let error_msg = result.unwrap_err().to_string();
+        assert_that!(error_msg, contains_substring("coroutine"));
+    }
+
+    #[test]
+    fn transformer_allows_safe_string_operations() {
+        let script = r#"
+            transaction.description = string.upper(transaction.description)
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Safe operations should work
+        assert_that!(result.len(), eq(1));
+        assert_that!(result[0].description.as_str(), eq("TEST TRANSACTION"));
+    }
+
+    #[test]
+    fn transformer_allows_safe_math_operations() {
+        let script = r#"
+            local amount_num = tonumber(transaction.amount)
+            if amount_num then
+                local rounded = math.floor(amount_num + 0.5)
+                transaction:set_tag("rounded", tostring(rounded))
+            end
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Safe operations should work
+        assert_that!(result.len(), eq(1));
+        assert_that!(
+            result[0].tags.get::<String>(&"rounded".to_string()),
+            some(eq(&"100".to_string()))
+        );
+    }
+
+    #[test]
+    fn transformer_allows_safe_table_operations() {
+        let script = r#"
+            local items = {"apple", "banana", "cherry"}
+            table.insert(items, "date")
+            transaction:set_tag("count", tostring(#items))
+        "#;
+        let transformer = LuaTransformer::new("test", script);
+        let tx = create_test_transaction();
+
+        let result = transformer.transform(tx);
+
+        // Safe operations should work
+        assert_that!(result.len(), eq(1));
+        assert_that!(
+            result[0].tags.get::<String>(&"count".to_string()),
+            some(eq(&"4".to_string()))
+        );
     }
 }
