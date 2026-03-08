@@ -94,7 +94,7 @@ pub struct GetTransactionsParams {
     /// Filter transactions by manual account id.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manual_account_id: Option<i64>,
-    /// Maximum number of transactions to return (1–2000, default 1000).
+    /// Maximum number of transactions to return (1–2000, default 500).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
     /// Offset into the result set; used for pagination together with
