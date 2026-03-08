@@ -1346,6 +1346,7 @@ version = "0.0.0-DEV"
 dependencies = [
  "chrono",
  "finance_as_code_budget_core",
+ "finance_as_code_utils_hmap",
  "googletest",
  "mlua",
  "rootcause",

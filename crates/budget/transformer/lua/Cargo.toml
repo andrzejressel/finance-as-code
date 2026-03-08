@@ -6,8 +6,10 @@ license.workspace = true
 
 [dependencies]
 finance_as_code_budget_core.workspace = true
-mlua.workspace = true
+mlua = { workspace = true, features = ["lua54", "vendored"] }
 rootcause.workspace = true
+uuid.workspace = true
+finance_as_code_utils_hmap.workspace = true
 
 [dev-dependencies]
 googletest.workspace = true
