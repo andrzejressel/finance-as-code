@@ -109,13 +109,11 @@ impl Transformer for LuaTransformer {
     }
 
     fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
-        // Create a safe Lua environment without IO, OS, PACKAGE, DEBUG, and COROUTINE libraries
-        // This prevents scripts from performing file I/O, executing system commands,
-        // loading packages, using debug introspection, or creating coroutines.
-        let safe_libs = StdLib::TABLE
-            | StdLib::STRING
-            | StdLib::MATH
-            | StdLib::UTF8;
+        // Create a safe Lua environment without IO, OS, PACKAGE, DEBUG, and COROUTINE
+        // libraries This prevents scripts from performing file I/O, executing
+        // system commands, loading packages, using debug introspection, or
+        // creating coroutines.
+        let safe_libs = StdLib::TABLE | StdLib::STRING | StdLib::MATH | StdLib::UTF8;
 
         let lua = Lua::new_with(safe_libs, LuaOptions::default())
             .expect("Failed to create safe Lua environment");
