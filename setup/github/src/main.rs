@@ -2,7 +2,8 @@ use crate::github::functions::get_repository::GetRepositoryArgs;
 use crate::github::repository_ruleset::RepositoryRulesetArgs;
 use crate::github::types::{
     RepositoryRulesetConditions, RepositoryRulesetConditionsRefName, RepositoryRulesetRules,
-    RepositoryRulesetRulesPullRequest, RepositoryRulesetRulesRequiredStatusChecksRequiredCheck,
+    RepositoryRulesetRulesCopilotCodeReview, RepositoryRulesetRulesPullRequest,
+    RepositoryRulesetRulesRequiredStatusChecksRequiredCheck,
 };
 use GithubIntegration::{Any, GithubActions, GithubAdvancedSecurity, Mergify};
 use anyhow::Result;
@@ -81,6 +82,9 @@ fn pulumi_main(ctx: &Context) -> Result<()> {
                     .non_fast_forward(true)
                     .required_linear_history(true)
                     .pull_request(RepositoryRulesetRulesPullRequest::builder().build_struct())
+                    .copilot_code_review(
+                        RepositoryRulesetRulesCopilotCodeReview::builder().build_struct(),
+                    )
                     .required_status_checks(
                         RepositoryRulesetRulesRequiredStatusChecks::builder()
                             .strict_required_status_checks_policy(false)
