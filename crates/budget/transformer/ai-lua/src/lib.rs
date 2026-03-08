@@ -44,7 +44,7 @@ pub fn create_ai_lua_builder(config: AiLuaConfig) -> Result<impl Transformer> {
 /// The generated Lua code is cached using the user description as the key,
 /// so subsequent transformations with the same description don't require
 /// additional API calls.
-pub struct AiLuaTransformer<G: ContentGenerator, E: LuaExecutor, KV: FileStringMap> {
+struct AiLuaTransformer<G: ContentGenerator, E: LuaExecutor, KV: FileStringMap> {
     name: String,
     user_description: String,
     content_generator: G,
@@ -54,7 +54,7 @@ pub struct AiLuaTransformer<G: ContentGenerator, E: LuaExecutor, KV: FileStringM
 }
 
 /// Type alias for the default AI Lua transformer with real implementations.
-pub type DefaultAiLuaTransformer = AiLuaTransformer<GeminiClient, DefaultLuaExecutor, JsonFileMap>;
+type DefaultAiLuaTransformer = AiLuaTransformer<GeminiClient, DefaultLuaExecutor, JsonFileMap>;
 
 impl<G, E, KV> AiLuaTransformer<G, E, KV>
 where

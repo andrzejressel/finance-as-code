@@ -55,7 +55,8 @@ pub mod lua {
 )]
 #[doc = include_str!("docs/lua-ai.md")]
 pub mod transformer_ai_lua {
-    pub use finance_as_code_budget_transformer_ai_lua::AiLuaTransformer;
+    pub use finance_as_code_budget_transformer_ai_lua::AiLuaConfig;
+    pub use finance_as_code_budget_transformer_ai_lua::create_ai_lua_builder;
 }
 
 #[cfg(feature = "sink_lunchmoney")]
