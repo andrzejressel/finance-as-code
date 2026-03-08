@@ -72,15 +72,16 @@ where
     }
 }
 
-trait DynValue: Any + Debug {
+trait DynValue: Any + Debug + 'static {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn eq_dyn(&self, other: &dyn DynValue) -> bool;
+    fn clone_boxed(&self) -> Box<dyn DynValue>;
 }
 
 impl<T> DynValue for T
 where
-    T: Any + Debug + PartialEq,
+    T: Any + Debug + PartialEq + Clone + 'static,
 {
     fn as_any(&self) -> &dyn Any {
         self
@@ -95,6 +96,10 @@ where
             .as_any()
             .downcast_ref::<T>()
             .is_some_and(|other_typed| self == other_typed)
+    }
+
+    fn clone_boxed(&self) -> Box<dyn DynValue> {
+        Box::new(self.clone())
     }
 }
 
@@ -114,7 +119,7 @@ impl<K: Eq + Hash> HMap<K> {
 
     pub fn insert<T>(&mut self, key: K, value: T) -> Option<T>
     where
-        T: 'static + Debug + PartialEq,
+        T: 'static + Debug + PartialEq + Clone,
     {
         match self.values.entry(key) {
             Entry::Occupied(mut entry) => {
@@ -159,7 +164,7 @@ impl<K: Eq + Hash> HMap<K> {
 
     pub fn remove<T>(&mut self, key: &K) -> Option<T>
     where
-        T: 'static + Debug + PartialEq,
+        T: 'static + Debug + PartialEq + Clone,
     {
         if let Some(existing) = self.values.get(key) {
             assert_type_match::<T>(existing.as_ref(), "remove");
@@ -203,6 +208,21 @@ where
     }
 }
 
+impl<K> Clone for HMap<K>
+where
+    K: Eq + Hash + Clone,
+{
+    fn clone(&self) -> Self {
+        let mut cloned_values = HashMap::new();
+        for (k, v) in &self.values {
+            cloned_values.insert(k.clone(), v.as_ref().clone_boxed());
+        }
+        Self {
+            values: cloned_values,
+        }
+    }
+}
+
 fn assert_type_match<T>(value: &dyn DynValue, operation: &str)
 where
     T: 'static,
@@ -219,7 +239,7 @@ mod tests {
     use super::HMap;
     use googletest::prelude::*;
 
-    #[derive(Debug, PartialEq, Eq, Hash)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone)]
     enum Key {
         Name,
         Age,
@@ -408,5 +428,36 @@ mod tests {
         map.insert(Key::Age, 30_i64);
 
         assert_that!(format!("{map:?}"), eq("HMap { len: 2, keys: [Age, Name] }"));
+    }
+
+    #[test]
+    fn clone_creates_independent_copy() {
+        let mut map: HMap<Key> = HMap::new();
+        map.insert(Key::Name, String::from("Alice"));
+        map.insert(Key::Age, 30_i64);
+
+        let mut cloned = map.clone();
+
+        // Modify the clone
+        cloned.insert(Key::Name, String::from("Bob"));
+        cloned.insert(Key::IsActive, true);
+
+        // Original should be unchanged
+        assert_that!(
+            map.get::<String>(&Key::Name).map(String::as_str),
+            some(eq("Alice"))
+        );
+        assert_that!(map.get::<i64>(&Key::Age), some(eq(&30)));
+        assert_that!(map.get::<bool>(&Key::IsActive), none());
+        assert_that!(map.len(), eq(2));
+
+        // Clone should have new values
+        assert_that!(
+            cloned.get::<String>(&Key::Name).map(String::as_str),
+            some(eq("Bob"))
+        );
+        assert_that!(cloned.get::<i64>(&Key::Age), some(eq(&30)));
+        assert_that!(cloned.get::<bool>(&Key::IsActive), some(eq(&true)));
+        assert_that!(cloned.len(), eq(3));
     }
 }
