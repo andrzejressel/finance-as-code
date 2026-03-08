@@ -48,6 +48,16 @@ pub mod lua {
     pub use finance_as_code_budget_transformer_lua::LuaTransformer;
 }
 
+#[cfg(feature = "transformer_ai_lua")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "transformer_ai_lua", feature = "all_with_ai")))
+)]
+#[doc = include_str!("docs/lua-ai.md")]
+pub mod transformer_ai_lua {
+    pub use finance_as_code_budget_transformer_ai_lua::AiLuaTransformer;
+}
+
 #[cfg(feature = "sink_lunchmoney")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
 #[doc = include_str!("docs/lunchmoney.md")]

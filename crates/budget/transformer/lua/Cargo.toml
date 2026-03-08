@@ -4,12 +4,16 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+mock = ["mockall"]
+
 [dependencies]
 finance_as_code_budget_core.workspace = true
 mlua.workspace = true
 rootcause.workspace = true
 uuid.workspace = true
 finance_as_code_utils_hmap.workspace = true
+mockall = { workspace = true, optional = true }
 
 [dev-dependencies]
 googletest.workspace = true

@@ -1,8 +1,20 @@
-use anyhow::{Context, Result};
 use genai::adapter::AdapterKind;
 use genai::chat::{ChatMessage, ChatRequest};
 use genai::resolver::{AuthData, AuthResolver, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget};
+
+/// Trait for generating content using AI.
+///
+/// This trait allows mocking the AI client in tests.
+#[cfg_attr(any(test, feature = "mock"), mockall::automock)]
+pub trait ContentGenerator {
+    /// Generates content from a prompt and returns the response as a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API call fails or the response is invalid.
+    fn generate_content(&self, prompt: &str) -> rootcause::Result<String>;
+}
 
 /// Client for interacting with the Google Gemini API using the `genai` crate.
 pub struct GeminiClient {
@@ -12,7 +24,7 @@ pub struct GeminiClient {
 impl GeminiClient {
     /// Creates a new `GeminiClient` with the given API key.
     pub fn create(api_key: String) -> Self {
-        let auth_resolver = Self::create_auth_resolver(api_key);
+        let auth_resolver = create_auth_resolver(api_key);
 
         let builder = Client::builder().with_auth_resolver(auth_resolver);
 
@@ -23,7 +35,7 @@ impl GeminiClient {
 
     /// Creates a new `GeminiClient` with the given API key and base URL.
     pub fn create_with_base_url(api_key: String, base_url: String) -> Self {
-        let auth_resolver = Self::create_auth_resolver(api_key);
+        let auth_resolver = create_auth_resolver(api_key);
 
         let resolver = ServiceTargetResolver::from_resolver_fn(move |mut target: ServiceTarget| {
             if matches!(target.model.adapter_kind, AdapterKind::Gemini) {
@@ -40,41 +52,42 @@ impl GeminiClient {
             client: builder.build(),
         }
     }
+}
 
-    /// Sends a prompt to the Gemini API and returns the generated response.
-    ///
-    /// This uses the `gemini-2.5-flash` model.
-    pub fn generate_content(&self, prompt: &str) -> Result<String> {
+impl ContentGenerator for GeminiClient {
+    fn generate_content(&self, prompt: &str) -> rootcause::Result<String> {
         let req = ChatRequest::new(vec![ChatMessage::user(prompt)]);
 
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .context("Failed to create tokio runtime")?;
+            .map_err(|e| rootcause::report!("Failed to create tokio runtime: {}", e))?;
 
         rt.block_on(async {
             let res = self
                 .client
                 .exec_chat("gemini-2.5-flash", req, None)
                 .await
-                .context("Failed to execute Gemini request via genai")?;
+                .map_err(|e| {
+                    rootcause::report!("Failed to execute Gemini request via genai: {}", e)
+                })?;
 
             Ok(res
                 .first_text()
-                .context("No content in Gemini response")?
+                .ok_or_else(|| rootcause::report!("No content in Gemini response"))?
                 .to_string())
         })
     }
+}
 
-    fn create_auth_resolver(api_key: String) -> AuthResolver {
-        AuthResolver::from_resolver_fn(move |model_iden: ModelIden| {
-            if matches!(model_iden.adapter_kind, AdapterKind::Gemini) {
-                Ok(Some(AuthData::Key(api_key.clone())))
-            } else {
-                Ok(None)
-            }
-        })
-    }
+fn create_auth_resolver(api_key: String) -> AuthResolver {
+    AuthResolver::from_resolver_fn(move |model_iden: ModelIden| {
+        if matches!(model_iden.adapter_kind, AdapterKind::Gemini) {
+            Ok(Some(AuthData::Key(api_key.clone())))
+        } else {
+            Ok(None)
+        }
+    })
 }
 
 #[cfg(test)]
