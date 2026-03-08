@@ -7,6 +7,8 @@ use finance_as_code_utils_gemini::{ContentGenerator, GeminiClient};
 use log::{debug, info, warn};
 use rootcause::Result;
 use rootcause::prelude::ResultExt;
+use schemars::JsonSchema;
+use serde::Deserialize;
 use std::cell::RefCell;
 use std::path::PathBuf;
 
@@ -56,6 +58,11 @@ struct AiLuaTransformer<G: ContentGenerator, E: LuaExecutor, KV: FileStringMap> 
 /// Type alias for the default AI Lua transformer with real implementations.
 type DefaultAiLuaTransformer = AiLuaTransformer<GeminiClient, DefaultLuaExecutor, JsonFileMap>;
 
+#[derive(Debug, Deserialize, JsonSchema)]
+struct GeneratedLuaResponse {
+    lua_code: String,
+}
+
 impl<G, E, KV> AiLuaTransformer<G, E, KV>
 where
     G: ContentGenerator,
@@ -70,29 +77,28 @@ where
     /// Returns an error if the content generator fails or returns invalid
     /// content.
     fn generate_lua_code(&self) -> Result<String> {
-        let prompt = self.create_prompt();
+        let system_prompt = self.create_system_prompt();
+        let user_prompt = self.create_user_prompt();
         debug!("Sending prompt to AI for Lua code generation");
 
         let response = self
             .content_generator
-            .generate_content(&prompt)
+            .generate_content::<GeneratedLuaResponse>(&system_prompt, &user_prompt)
             .context("Failed to generate Lua code from AI")?;
 
         // Clean up the response - remove markdown code blocks if present
-        let lua_code = self.clean_lua_code(&response);
+        let lua_code = self.clean_lua_code(&response.lua_code);
 
         debug!("Generated Lua code: {}", lua_code);
         Ok(lua_code)
     }
 
-    /// Creates the prompt for AI to generate Lua code.
-    fn create_prompt(&self) -> String {
-        format!(
-            r#"You are a code generator that creates Lua scripts for financial transaction transformation.
+    /// Creates the system prompt for AI to generate Lua code.
+    fn create_system_prompt(&self) -> String {
+        r#"You are a code generator that creates Lua scripts for financial transaction transformation.
 
 ## Task
-Generate a Lua script based on this user requirement:
-{}
+Generate a Lua script based on the provided user requirement.
 
 ## Lua API
 You have access to a global `transaction` object with these fields and methods:
@@ -146,15 +152,19 @@ local tx2 = transaction:split()
 return {{transaction, tx2}}
 
 ## Rules
-1. Return ONLY the Lua code, no explanations or markdown
-2. Do not wrap in ```lua ... ``` blocks
+1. Output valid Lua code only in the `lua_code` JSON field
+2. Do not wrap code in ```lua ... ``` blocks
 3. Use proper Lua syntax (then/end, local variables, etc.)
 4. Keep the code simple and efficient
 5. Handle edge cases gracefully
 
-Generate the Lua script now:"#,
-            self.user_description
-        )
+Generate the Lua script now:"#
+            .to_string()
+    }
+
+    /// Creates the user prompt for AI to generate Lua code.
+    fn create_user_prompt(&self) -> String {
+        self.user_description.clone()
     }
 
     /// Cleans the generated Lua code by removing markdown code block markers.
@@ -361,9 +371,13 @@ mod tests {
 
         // Setup mock generator to return Lua code
         mock_generator
-            .expect_generate_content()
+            .expect_generate_content::<GeneratedLuaResponse>()
             .times(1)
-            .returning(|_| Ok(r#"transaction:set_tag("category", "Grocery")"#.to_string()));
+            .returning(|_, _| {
+                Ok(GeneratedLuaResponse {
+                    lua_code: r#"transaction:set_tag("category", "Grocery")"#.to_string(),
+                })
+            });
 
         // Setup mock executor to return a transformed transaction
         mock_executor
@@ -404,9 +418,13 @@ mod tests {
 
         // Setup mock generator to return Lua code with markdown
         mock_generator
-            .expect_generate_content()
+            .expect_generate_content::<GeneratedLuaResponse>()
             .times(1)
-            .returning(|_| Ok("```lua\ntransaction:set_tag(\"test\", \"value\")\n```".to_string()));
+            .returning(|_, _| {
+                Ok(GeneratedLuaResponse {
+                    lua_code: "```lua\ntransaction:set_tag(\"test\", \"value\")\n```".to_string(),
+                })
+            });
 
         // Setup mock executor
         mock_executor
@@ -446,9 +464,13 @@ mod tests {
 
         // Generator should only be called once
         mock_generator
-            .expect_generate_content()
+            .expect_generate_content::<GeneratedLuaResponse>()
             .times(1)
-            .returning(|_| Ok(r#"transaction:set_tag("cached", "true")"#.to_string()));
+            .returning(|_, _| {
+                Ok(GeneratedLuaResponse {
+                    lua_code: r#"transaction:set_tag("cached", "true")"#.to_string(),
+                })
+            });
 
         // Executor called twice
         mock_executor
@@ -487,9 +509,9 @@ mod tests {
 
         // Setup mock generator to return error
         mock_generator
-            .expect_generate_content()
+            .expect_generate_content::<GeneratedLuaResponse>()
             .times(1)
-            .returning(|_| Err(rootcause::report!("API error")));
+            .returning(|_, _| Err(rootcause::report!("API error")));
 
         let transformer = create_transformer_with_mocks(
             "test-error",

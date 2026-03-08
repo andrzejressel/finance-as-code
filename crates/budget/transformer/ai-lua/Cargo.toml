@@ -12,6 +12,8 @@ finance_as_code_utils_file_map.workspace = true
 bon.workspace = true
 rootcause.workspace = true
 log.workspace = true
+serde.workspace = true
+schemars.workspace = true
 
 [dev-dependencies]
 googletest.workspace = true
