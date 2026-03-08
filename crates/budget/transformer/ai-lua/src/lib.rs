@@ -1,12 +1,12 @@
 use bon::Builder;
-use finance_as_code_budget_core::transformer::Transformer;
 use finance_as_code_budget_core::Transaction;
+use finance_as_code_budget_core::transformer::Transformer;
 use finance_as_code_budget_transformer_lua::{DefaultLuaExecutor, LuaExecutor};
 use finance_as_code_utils_file_map::{FileStringMap, JsonFileMap};
 use finance_as_code_utils_gemini::{ContentGenerator, GeminiClient};
 use log::{debug, info, warn};
-use rootcause::prelude::ResultExt;
 use rootcause::Result;
+use rootcause::prelude::ResultExt;
 use std::cell::RefCell;
 use std::path::PathBuf;
 
@@ -62,11 +62,13 @@ where
     E: LuaExecutor,
     KV: FileStringMap,
 {
-    /// Generates Lua code from the user description using the content generator.
+    /// Generates Lua code from the user description using the content
+    /// generator.
     ///
     /// # Errors
     ///
-    /// Returns an error if the content generator fails or returns invalid content.
+    /// Returns an error if the content generator fails or returns invalid
+    /// content.
     fn generate_lua_code(&self) -> Result<String> {
         let prompt = self.create_prompt();
         debug!("Sending prompt to AI for Lua code generation");
@@ -211,7 +213,6 @@ Generate the Lua script now:"#,
     }
 }
 
-
 impl<G, E, KV> Transformer for AiLuaTransformer<G, E, KV>
 where
     G: ContentGenerator,
@@ -246,13 +247,14 @@ mod tests {
     use googletest::assert_that;
     use googletest::prelude::eq;
     use googletest::prelude::some;
-    use rusty_money::iso::USD;
     use rusty_money::Money;
+    use rusty_money::iso::USD;
     use std::path::Path;
     use tempfile::NamedTempFile;
     use uuid::Uuid;
 
-    type MockAiLuaTransformer = AiLuaTransformer<MockContentGenerator, MockLuaExecutor, JsonFileMap>;
+    type MockAiLuaTransformer =
+        AiLuaTransformer<MockContentGenerator, MockLuaExecutor, JsonFileMap>;
 
     fn create_transformer_with_mocks(
         name: &str,
@@ -320,7 +322,7 @@ mod tests {
         let mut mock_executor = MockLuaExecutor::new();
 
         // Setup mock to return a transformed transaction
-        let expected_tx = create_test_transaction();
+        let _expected_tx = create_test_transaction();
         mock_executor
             .expect_execute()
             .times(1)

@@ -13,7 +13,8 @@ use std::cell::RefCell;
 /// This trait allows mocking Lua execution in tests.
 #[cfg_attr(any(test, feature = "mock"), mockall::automock)]
 pub trait LuaExecutor {
-    /// Executes a Lua script on a transaction and returns the transformed transactions.
+    /// Executes a Lua script on a transaction and returns the transformed
+    /// transactions.
     ///
     /// # Arguments
     ///
@@ -23,7 +24,8 @@ pub trait LuaExecutor {
     ///
     /// # Returns
     ///
-    /// A vector of transformed transactions. May be empty if the transaction was dropped.
+    /// A vector of transformed transactions. May be empty if the transaction
+    /// was dropped.
     fn execute(&self, name: &str, script: &str, transaction: Transaction) -> Vec<Transaction>;
 }
 
