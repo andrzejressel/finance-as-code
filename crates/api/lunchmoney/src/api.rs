@@ -269,7 +269,7 @@ impl LunchMoneyApi for LunchMoneyClient {
 
     fn get_all_transactions(&self, params: &GetTransactionsParams) -> Result<Vec<TransactionDto>> {
         let mut all_transactions = Vec::new();
-        let limit = params.limit.unwrap_or(500);
+        let limit = params.limit.unwrap_or(1000);
         let mut offset = params.offset.unwrap_or(0);
 
         loop {

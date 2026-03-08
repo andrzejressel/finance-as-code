@@ -175,6 +175,7 @@ impl Sink for LunchMoneySink {
             .get_all_transactions(
                 &finance_as_code_api_lunchmoney::dto::GetTransactionsParams {
                     manual_account_id: Some(account_id),
+                    limit: Some(500),
                     ..Default::default()
                 },
             )
