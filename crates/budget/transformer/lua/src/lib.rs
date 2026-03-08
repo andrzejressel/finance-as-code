@@ -14,66 +14,56 @@ pub struct LuaTransformer {
 }
 
 struct LuaTransaction {
-    // We use RefCell to allow mutation from Lua, and Option to allow moving the transaction out.
-    inner: RefCell<Option<Transaction>>,
+    // We use RefCell to allow mutation from Lua.
+    inner: RefCell<Transaction>,
 }
 
 impl UserData for LuaTransaction {
     fn add_fields<F: UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("id", |_, this| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.id.to_string())
+            Ok(borrow.id.to_string())
         });
         fields.add_field_method_get("date", |_, this| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.date.to_string())
+            Ok(borrow.date.to_string())
         });
         fields.add_field_method_get("description", |_, this| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.description.clone())
+            Ok(borrow.description.clone())
         });
         fields.add_field_method_set("description", |_, this, val: String| {
             let mut borrow = this.inner.borrow_mut();
-            let tx = borrow.as_mut().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            tx.description = val;
+            borrow.description = val;
             Ok(())
         });
         fields.add_field_method_get("counterparty", |_, this| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.counterparty.clone())
+            Ok(borrow.counterparty.clone())
         });
         fields.add_field_method_set("counterparty", |_, this, val: String| {
             let mut borrow = this.inner.borrow_mut();
-            let tx = borrow.as_mut().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            tx.counterparty = val;
+            borrow.counterparty = val;
             Ok(())
         });
         fields.add_field_method_get("amount", |_, this| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.amount.amount().to_string())
+            Ok(borrow.amount.amount().to_string())
         });
         fields.add_field_method_get("currency", |_, this| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.amount.currency().to_string())
+            Ok(borrow.amount.currency().to_string())
         });
     }
 
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("get_tag", |_, this, key: String| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            Ok(tx.tags.get::<String>(&key).cloned())
+            Ok(borrow.tags.get::<String>(&key).cloned())
         });
         methods.add_method_mut("set_tag", |_, this, (key, value): (String, String)| {
             let mut borrow = this.inner.borrow_mut();
-            let tx = borrow.as_mut().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
-            tx.tags.insert(key, value);
+            borrow.tags.insert(key, value);
             Ok(())
         });
         
@@ -81,19 +71,18 @@ impl UserData for LuaTransaction {
         // This is a limitation of the current HMap design if we don't want to change it.
         methods.add_method("split", |_, this, ()| {
             let borrow = this.inner.borrow();
-            let tx = borrow.as_ref().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?;
             
             let new_tx = Transaction {
                 id: uuid::Uuid::new_v4(), // Give it a new ID
-                date: tx.date,
-                description: tx.description.clone(),
-                counterparty: tx.counterparty.clone(),
-                amount: tx.amount.clone(),
-                other_side_account_number: tx.other_side_account_number.clone(),
+                date: borrow.date,
+                description: borrow.description.clone(),
+                counterparty: borrow.counterparty.clone(),
+                amount: borrow.amount.clone(),
+                other_side_account_number: borrow.other_side_account_number.clone(),
                 tags: finance_as_code_utils_hmap::HMap::new(),
             };
             
-            Ok(LuaTransaction { inner: RefCell::new(Some(new_tx)) })
+            Ok(LuaTransaction { inner: RefCell::new(new_tx) })
         });
     }
 }
@@ -116,14 +105,8 @@ impl Transformer for LuaTransformer {
         let lua = Lua::new();
 
         let result: mlua::Result<Vec<Transaction>> = (|| {
-            // We need to keep a reference to the primary transaction to take it back later if needed.
-            // But LuaUserData takes ownership. 
-            // In mlua 0.11, we can't easily share ownership of UserData between Rust and Lua
-            // without Arc, but Arc<T> only implements UserData if T does and we'd need to wrap it.
-            // Wait, mlua provides a way to use handle? No.
-            
-            // Let's use a trick: we put it in a global table.
-            let lua_tx = LuaTransaction { inner: RefCell::new(Some(transaction)) };
+            // We put the transaction in a global variable wrapped in LuaTransaction.
+            let lua_tx = LuaTransaction { inner: RefCell::new(transaction) };
             lua.globals().set("transaction", lua_tx)?;
 
             let result_multivalue: mlua::MultiValue = lua.load(&self.script).eval()?;
@@ -131,8 +114,8 @@ impl Transformer for LuaTransformer {
             if result_multivalue.is_empty() {
                 // Script returned nothing, use global transaction
                 let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
-                let lt = ud.borrow::<LuaTransaction>()?;
-                return Ok(vec![lt.inner.borrow_mut().take().unwrap()]);
+                let lt = ud.take::<LuaTransaction>()?;
+                return Ok(vec![lt.inner.into_inner()]);
             }
 
             let result_value = result_multivalue.get(0).unwrap();
@@ -142,24 +125,22 @@ impl Transformer for LuaTransformer {
             }
 
             if let Some(ud) = result_value.as_userdata() {
-                let lt = ud.borrow::<LuaTransaction>()?;
-                let mut borrow = lt.inner.borrow_mut();
-                Ok(vec![borrow.take().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?])
+                let lt = ud.take::<LuaTransaction>()?;
+                Ok(vec![lt.inner.into_inner()])
             } else if let Some(table) = result_value.as_table() {
                 let mut txs = Vec::new();
                 for res in table.sequence_values::<mlua::Value>() {
                     let val = res?;
                     if let Some(ud) = val.as_userdata() {
-                        let lt = ud.borrow::<LuaTransaction>()?;
-                        let mut borrow = lt.inner.borrow_mut();
-                        txs.push(borrow.take().ok_or_else(|| mlua::Error::runtime("Transaction already moved out"))?);
+                        let lt = ud.take::<LuaTransaction>()?;
+                        txs.push(lt.inner.into_inner());
                     }
                 }
                 Ok(txs)
             } else {
                 let ud: mlua::AnyUserData = lua.globals().get("transaction")?;
-                let lt = ud.borrow::<LuaTransaction>()?;
-                Ok(vec![lt.inner.borrow_mut().take().unwrap()])
+                let lt = ud.take::<LuaTransaction>()?;
+                Ok(vec![lt.inner.into_inner()])
             }
         })();
 
