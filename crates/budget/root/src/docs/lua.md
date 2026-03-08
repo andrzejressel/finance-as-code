@@ -51,7 +51,7 @@ Your Lua scripts have access to a global `transaction` object with these propert
 ### Methods:
 - `transaction:get_tag(key)` - Get tag value or `nil`
 - `transaction:set_tag(key, value)` - Set tag value
-- `transaction:clone()` - Create a copy of the transaction with all fields and tags
+- `transaction:clone()` - Create a copy of the transaction with all fields and tags, but a new `id` (new UUID)
 
 ### Return values:
 - Return nothing → modified `transaction` is used
