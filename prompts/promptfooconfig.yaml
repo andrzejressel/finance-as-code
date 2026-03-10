@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+# Learn more about building a configuration: https://promptfoo.dev/docs/configuration/guide
+
+description: "AI Lua transformer examples"
+
+prompts:
+  - |
+      {{user_prompt}}
+
+defaultTest: 
+  vars:
+    system_instruction: "file://../crates/budget/transformer/ai-lua/src/lua-ai-prompt-template.md"
+  options:
+    transform: JSON.parse(output).lua_code
+      
+providers:
+  - id: "google:gemini-3.1-flash-lite-preview"
+    label: "Gemini 3.1 Flash Lite"
+    config:
+      systemInstruction: "file://../crates/budget/transformer/ai-lua/src/lua-ai-prompt-template.md"
+  - id: "google:gemini-3.1-flash-lite-preview"
+    label: "Gemini 3.1 Flash Lite with thinking config"
+    config:
+      systemInstruction: "file://../crates/budget/transformer/ai-lua/src/lua-ai-prompt-template.md"
+      generationConfig:
+        thinkingConfig:
+          thinkingLevel: HIGH
+  
+tests:
+  - vars:
+      user_prompt: "Set category tag to 'Food' when description matches 'RESTAURANT' or 'CAFE', and to 'Transport' when description matches 'UBER' or 'TAXI'"
+
+  - vars:
+      user_prompt: "Drop any transaction whose description contains 'INTERNAL TRANSFER'"
+
+  - vars:
+      user_prompt: "Replace counterparty with 'Amazon' when description starts with 'AMZN', and with 'Netflix' when counterparty contains 'NFLX'"
