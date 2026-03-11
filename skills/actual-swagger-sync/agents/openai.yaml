@@ -1,0 +1,4 @@
+interface:
+  display_name: "Actual Swagger Sync"
+  short_description: "Sync Actual API swagger into crate"
+  default_prompt: "Start the Actual HTTP API Docker container, fetch /api-docs/swagger.json, and write it to crates/api/actual/swagger.json."

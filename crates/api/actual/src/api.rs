@@ -1,4 +1,8 @@
-use crate::dto::{CreateTransactionRequest, GeneralResponseMessage};
+use crate::dto::{
+    CreateTransactionRequest, CreateTransactionsBatchRequest, DeleteTransactionsBatchRequest,
+    GeneralResponseMessage, ImportTransactionsRequest, ImportTransactionsResponse,
+    ImportTransactionsResult,
+};
 use crate::{ApiKey, BudgetEncryptionPassword, BudgetSyncId};
 use finance_as_code_utils_resilience::{
     ExponentialBackoff, RetryError, retry_with_exponential_backoff_selective,
@@ -58,8 +62,25 @@ pub trait ActualApi {
         request: &CreateTransactionRequest,
     ) -> Result<()>;
 
+    /// Create multiple transactions in the provided account.
+    fn create_transactions_batch(
+        &self,
+        account_id: &str,
+        request: &CreateTransactionsBatchRequest,
+    ) -> Result<()>;
+
+    /// Import multiple transactions and return added/updated transaction ids.
+    fn import_transactions(
+        &self,
+        account_id: &str,
+        request: &ImportTransactionsRequest,
+    ) -> Result<ImportTransactionsResult>;
+
     /// Delete a single transaction by id.
     fn delete_transaction(&self, transaction_id: &str) -> Result<()>;
+
+    /// Delete multiple transactions by ids.
+    fn delete_transactions_batch(&self, request: &DeleteTransactionsBatchRequest) -> Result<()>;
 }
 
 /// Real HTTP client backed by the Actual HTTP API.
@@ -179,6 +200,62 @@ impl ActualApi for ActualClient {
         Ok(())
     }
 
+    fn create_transactions_batch(
+        &self,
+        account_id: &str,
+        request: &CreateTransactionsBatchRequest,
+    ) -> Result<()> {
+        let operation = "POST /budgets/{budgetSyncId}/accounts/{accountId}/transactions/batch";
+        let response = self
+            .send(
+                || {
+                    self.with_common_headers(self.client.post(format!(
+                        "{}/budgets/{}/accounts/{}/transactions/batch",
+                        self.config.base_url,
+                        self.config.budget_sync_id.value(),
+                        account_id
+                    )))
+                    .json(request)
+                },
+                operation,
+            )
+            .context("failed to create transactions batch in Actual")?;
+
+        let _response_message = response
+            .json::<GeneralResponseMessage>()
+            .context("failed to deserialize create transactions batch response")?;
+
+        Ok(())
+    }
+
+    fn import_transactions(
+        &self,
+        account_id: &str,
+        request: &ImportTransactionsRequest,
+    ) -> Result<ImportTransactionsResult> {
+        let operation = "POST /budgets/{budgetSyncId}/accounts/{accountId}/transactions/import";
+        let response = self
+            .send(
+                || {
+                    self.with_common_headers(self.client.post(format!(
+                        "{}/budgets/{}/accounts/{}/transactions/import",
+                        self.config.base_url,
+                        self.config.budget_sync_id.value(),
+                        account_id
+                    )))
+                    .json(request)
+                },
+                operation,
+            )
+            .context("failed to import transactions in Actual")?;
+
+        let response = response
+            .json::<ImportTransactionsResponse>()
+            .context("failed to deserialize import transactions response")?;
+
+        Ok(response.into_result())
+    }
+
     fn delete_transaction(&self, transaction_id: &str) -> Result<()> {
         let operation = "DELETE /budgets/{budgetSyncId}/transactions/{transactionId}";
         let response = self
@@ -198,6 +275,29 @@ impl ActualApi for ActualClient {
         let _response_message = response
             .json::<GeneralResponseMessage>()
             .context("failed to deserialize delete transaction response")?;
+
+        Ok(())
+    }
+
+    fn delete_transactions_batch(&self, request: &DeleteTransactionsBatchRequest) -> Result<()> {
+        let operation = "DELETE /budgets/{budgetSyncId}/transactions/batch";
+        let response = self
+            .send(
+                || {
+                    self.with_common_headers(self.client.delete(format!(
+                        "{}/budgets/{}/transactions/batch",
+                        self.config.base_url,
+                        self.config.budget_sync_id.value(),
+                    )))
+                    .json(request)
+                },
+                operation,
+            )
+            .context("failed to delete transactions batch in Actual")?;
+
+        let _response_message = response
+            .json::<GeneralResponseMessage>()
+            .context("failed to deserialize delete transactions batch response")?;
 
         Ok(())
     }
@@ -266,6 +366,163 @@ mod tests {
                     },
                 },
             )
+            .unwrap();
+
+        mock.assert();
+    }
+
+    #[test]
+    fn create_transactions_batch_sends_request_and_parses_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/budgets/budget-sync-1/accounts/account-1/transactions/batch")
+                .header("x-api-key", "test_key")
+                .json_body(json!({
+                    "learnCategories": false,
+                    "runTransfers": false,
+                    "transactions": [
+                        {
+                            "account": "account-1",
+                            "date": "2026-03-10",
+                            "amount": -1250,
+                            "payee_name": "Coffee Shop",
+                            "cleared": false
+                        },
+                        {
+                            "account": "account-1",
+                            "date": "2026-03-11",
+                            "amount": -2000,
+                            "payee_name": "Groceries",
+                            "cleared": true
+                        }
+                    ]
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({ "message": "ok" }));
+        });
+
+        let client = ActualClient::new_for_test(base_config(&server));
+        client
+            .create_transactions_batch(
+                "account-1",
+                &CreateTransactionsBatchRequest {
+                    learn_categories: Some(false),
+                    run_transfers: Some(false),
+                    transactions: vec![
+                        TransactionDto {
+                            account: "account-1".to_string(),
+                            date: "2026-03-10".to_string(),
+                            amount: Some(-1250),
+                            payee: None,
+                            payee_name: Some("Coffee Shop".to_string()),
+                            imported_payee: None,
+                            category: None,
+                            notes: None,
+                            imported_id: None,
+                            transfer_id: None,
+                            cleared: Some(false),
+                            subtransactions: None,
+                        },
+                        TransactionDto {
+                            account: "account-1".to_string(),
+                            date: "2026-03-11".to_string(),
+                            amount: Some(-2000),
+                            payee: None,
+                            payee_name: Some("Groceries".to_string()),
+                            imported_payee: None,
+                            category: None,
+                            notes: None,
+                            imported_id: None,
+                            transfer_id: None,
+                            cleared: Some(true),
+                            subtransactions: None,
+                        },
+                    ],
+                },
+            )
+            .unwrap();
+
+        mock.assert();
+    }
+
+    #[test]
+    fn import_transactions_sends_request_and_parses_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/budgets/budget-sync-1/accounts/account-1/transactions/import")
+                .header("x-api-key", "test_key")
+                .json_body(json!({
+                    "transactions": [
+                        {
+                            "account": "account-1",
+                            "date": "2026-03-10",
+                            "amount": -1250,
+                            "payee_name": "Coffee Shop",
+                            "cleared": false
+                        }
+                    ]
+                }));
+            then.status(201)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "data": {
+                        "added": ["tx-added-1"],
+                        "updated": ["tx-updated-1"]
+                    }
+                }));
+        });
+
+        let client = ActualClient::new_for_test(base_config(&server));
+        let response = client
+            .import_transactions(
+                "account-1",
+                &ImportTransactionsRequest {
+                    transactions: vec![TransactionDto {
+                        account: "account-1".to_string(),
+                        date: "2026-03-10".to_string(),
+                        amount: Some(-1250),
+                        payee: None,
+                        payee_name: Some("Coffee Shop".to_string()),
+                        imported_payee: None,
+                        category: None,
+                        notes: None,
+                        imported_id: None,
+                        transfer_id: None,
+                        cleared: Some(false),
+                        subtransactions: None,
+                    }],
+                },
+            )
+            .unwrap();
+
+        assert_that!(response.added, elements_are![eq("tx-added-1")]);
+        assert_that!(response.updated, elements_are![eq("tx-updated-1")]);
+        mock.assert();
+    }
+
+    #[test]
+    fn delete_transactions_batch_sends_request_and_parses_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(DELETE)
+                .path("/budgets/budget-sync-1/transactions/batch")
+                .header("x-api-key", "test_key")
+                .json_body(json!({
+                    "transactionIds": ["tx-1", "tx-2"]
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({ "message": "Transactions deleted" }));
+        });
+
+        let client = ActualClient::new_for_test(base_config(&server));
+        client
+            .delete_transactions_batch(&DeleteTransactionsBatchRequest {
+                transaction_ids: vec!["tx-1".to_string(), "tx-2".to_string()],
+            })
             .unwrap();
 
         mock.assert();
