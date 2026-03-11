@@ -2,7 +2,7 @@
 
 Low-level client for the Actual HTTP API wrapper.
 
-Primary schema source in this repository: `swagger.json` (downloaded from the private Actual API instance).
+Primary schema source in this repository: `swagger.json` (synced from the `jhonderson/actual-http-api:26.3.0` Docker image via `skills/actual-swagger-sync`).
 
 ## Non-obvious behaviour
 
