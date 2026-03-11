@@ -30,6 +30,7 @@ finance_as_code_utils_resilience = { path = "crates/utils/resilience" }
 finance_as_code_budget_sink_treeline = { path = "crates/budget/sink/treeline" }
 finance_as_code_budget_sink_lunchmoney = { path = "crates/budget/sink/lunchmoney" }
 finance_as_code_api_lunchmoney = { path = "crates/api/lunchmoney" }
+finance_as_code_api_actual = { path = "crates/api/actual" }
 
 rootcause = { version = "0.12.0" }
 bon = "3.8.2"

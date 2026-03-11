@@ -1309,6 +1309,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "finance_as_code_api_actual"
+version = "0.0.0-DEV"
+dependencies = [
+ "finance_as_code_utils_resilience",
+ "googletest",
+ "httpmock",
+ "log",
+ "mockall",
+ "reqwest 0.13.2",
+ "rootcause",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "finance_as_code_api_lunchmoney"
 version = "0.0.0-DEV"
 dependencies = [
