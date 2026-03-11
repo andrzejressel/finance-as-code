@@ -1,0 +1,21 @@
+[package]
+name = "finance_as_code_api_actual"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+mock = []
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+rootcause.workspace = true
+log.workspace = true
+mockall.workspace = true
+finance_as_code_utils_resilience.workspace = true
+
+[dev-dependencies]
+httpmock.workspace = true
+googletest.workspace = true

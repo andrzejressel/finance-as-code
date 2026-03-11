@@ -38,6 +38,9 @@ This forces DuckDB to download its native library at build time rather than link
 
 After making changes, run `just fmt` to format and fix lints, then `just test` to run the full test suite (including doc tests). Both must pass before considering work done.
 
+- **Agent sandbox note**: in some agent environments, `just test` may fail with `os error 5` (`Access is denied`) while listing or launching test binaries.
+- If that happens, rerun the same `just test` command with elevated permissions.
+
 ## Documentation Requirements
 
 - **Always add docs examples for new pipeline entry points**: whenever you introduce a new public setup, source, or sink constructor, add at least one user-facing Rust example showing how to create and use it.

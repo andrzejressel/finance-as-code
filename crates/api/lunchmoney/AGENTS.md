@@ -30,4 +30,4 @@ Direct OpenAPI yaml: https://alpha.lunchmoney.dev/v2/openapi
 
 **Error Handling**: Uses `rootcause` for context-aware error reporting, capturing HTTP status code, response headers, and response body on failure.
 
-**Rate Limiting**: API enforces `100 requests/minute` per IP. On HTTP `429 Too Many Requests`, respect the `Retry-After` header (seconds) before retrying.
+**Rate Limiting**: in addition to the shared `crates/api` `HTTP 5xx` exponential-backoff policy, Lunch Money has extra `HTTP 429 Too Many Requests` handling. The client respects `Retry-After` (seconds) before retrying and falls back to a default wait when that header is missing.
