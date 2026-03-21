@@ -7,6 +7,9 @@ license.workspace = true
 [features]
 mock = ["mockall"]
 
+[package.metadata.cargo-machete]
+ignored = ["finance_as_code_utils_hmap", "mockall"]
+
 [dependencies]
 finance_as_code_budget_core.workspace = true
 mlua.workspace = true
@@ -16,6 +19,7 @@ finance_as_code_utils_hmap.workspace = true
 mockall = { workspace = true, optional = true }
 
 [dev-dependencies]
+mockall.workspace = true
 googletest.workspace = true
 chrono.workspace = true
 rusty-money.workspace = true

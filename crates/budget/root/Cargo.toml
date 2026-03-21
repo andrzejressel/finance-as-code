@@ -14,6 +14,15 @@ all = ["sink_lunchmoney", "source_lunchflow", "source_mbank", "sink_treeline"]
 bundled_db = ["dep:duckdb"]
 all_with_db = ["all", "bundled_db"]
 
+[package.metadata.cargo-machete]
+ignored = [
+    "chrono",
+    "duckdb",
+    "finance_as_code_utils_hmap",
+    "rusty-money",
+    "uuid",
+]
+
 [dependencies]
 finance_as_code_budget_core.workspace = true
 finance_as_code_budget_source_lunchflow = { workspace = true, optional = true }
