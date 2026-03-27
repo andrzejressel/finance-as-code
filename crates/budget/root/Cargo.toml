@@ -3,6 +3,9 @@ name = "finance_as_code_budget"
 version = "0.1.0"
 edition = "2024"
 
+[package.metadata.cargo-machete]
+ignored = ["chrono", "duckdb", "finance_as_code_utils_hmap", "rusty-money", "uuid"]
+
 [features]
 source_lunchflow = ["dep:finance_as_code_budget_source_lunchflow"]
 source_mbank = ["dep:finance_as_code_budget_source_mbank"]
