@@ -38,7 +38,7 @@ jobs:
           for path in glob.glob("target/debug/build/libduckdb*"):
             print(f"Removing {path}\n")
             shutil.rmtree(path)
-      - uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       - name: Install
         run: just install
       - name: Check
