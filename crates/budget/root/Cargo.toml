@@ -24,6 +24,9 @@ finance_as_code_budget_transformer_lua.workspace = true
 finance_as_code_budget_transformer_ai_lua.workspace = true
 duckdb = { workspace = true, optional = true, features = ["bundled"] }
 
+[package.metadata.cargo-machete]
+ignored = ["chrono", "duckdb", "finance_as_code_utils_hmap", "rusty-money", "uuid"]
+
 [dev-dependencies]
 rusty-money.workspace = true
 chrono.workspace = true

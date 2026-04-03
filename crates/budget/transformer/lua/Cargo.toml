@@ -10,10 +10,12 @@ mock = ["mockall"]
 [dependencies]
 finance_as_code_budget_core.workspace = true
 mlua.workspace = true
-rootcause.workspace = true
 uuid.workspace = true
 finance_as_code_utils_hmap.workspace = true
 mockall = { workspace = true, optional = true }
+
+[package.metadata.cargo-machete]
+ignored = ["finance_as_code_utils_hmap"]
 
 [dev-dependencies]
 googletest.workspace = true
