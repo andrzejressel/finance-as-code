@@ -12,7 +12,6 @@ serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true
 rootcause.workspace = true
-log.workspace = true
 mockall.workspace = true
 finance_as_code_utils_resilience.workspace = true
 
