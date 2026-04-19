@@ -1,6 +1,6 @@
 set windows-shell := ["pwsh.exe", "-c"]
 
-nightly := "nightly-2026-04-05"
+nightly := "nightly-2026-04-19"
 
 install:
     rustup +{{nightly}} component add rustfmt
