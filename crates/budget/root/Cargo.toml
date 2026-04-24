@@ -29,3 +29,6 @@ rusty-money.workspace = true
 chrono.workspace = true
 finance_as_code_utils_hmap.workspace = true
 uuid.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["chrono", "duckdb", "finance_as_code_utils_hmap", "rusty-money", "uuid"]

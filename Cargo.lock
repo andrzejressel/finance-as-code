@@ -1355,7 +1355,6 @@ dependencies = [
  "finance_as_code_utils_resilience",
  "googletest",
  "httpmock",
- "log",
  "mockall",
  "reqwest 0.13.2",
  "rootcause",
@@ -1516,7 +1515,6 @@ dependencies = [
  "googletest",
  "mlua",
  "mockall",
- "rootcause",
  "rusty-money",
  "uuid",
 ]
