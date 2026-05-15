@@ -1,0 +1,20 @@
+[package]
+name = "finance_as_code_budget_transformer_squasher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+finance_as_code_budget_core.workspace = true
+bon.workspace = true
+chrono.workspace = true
+rusty-money.workspace = true
+rust_decimal.workspace = true
+uuid.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+googletest.workspace = true
+rusty-money.workspace = true
+chrono.workspace = true
+uuid.workspace = true
