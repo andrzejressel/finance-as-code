@@ -22,6 +22,7 @@ finance_as_code_budget_source_mbank = { path = "crates/budget/source/mbank" }
 finance_as_code_budget_source_lunchflow = { path = "crates/budget/source/lunchflow" }
 finance_as_code_budget_transformer_lua = { path = "crates/budget/transformer/lua" }
 finance_as_code_budget_transformer_ai_lua = { path = "crates/budget/transformer/ai-lua" }
+finance_as_code_budget_transformer_squasher = { path = "crates/budget/transformer/squasher" }
 finance_as_code_utils_chrono = { path = "crates/utils/chrono" }
 finance_as_code_utils_file_map = { path = "crates/utils/file_map" }
 finance_as_code_utils_gemini = { path = "crates/utils/gemini" }
