@@ -7,7 +7,32 @@ use crate::Transaction;
 pub trait Transformer {
     fn name(&self) -> &str;
 
-    fn transform(&self, transaction: Transaction) -> Vec<Transaction>;
+    fn transform(&self, transactions: Vec<Transaction>) -> Vec<Transaction>;
+}
+
+/// [SingleTransactionTransformer] allows users to define transformation logic
+/// for one transaction at a time. It can be automatically used as a batch
+/// [Transformer].
+pub trait SingleTransactionTransformer {
+    fn name(&self) -> &str;
+
+    fn transform_single(&self, transaction: Transaction) -> Vec<Transaction>;
+}
+
+impl<T> Transformer for T
+where
+    T: SingleTransactionTransformer,
+{
+    fn name(&self) -> &str {
+        SingleTransactionTransformer::name(self)
+    }
+
+    fn transform(&self, transactions: Vec<Transaction>) -> Vec<Transaction> {
+        transactions
+            .into_iter()
+            .flat_map(|transaction| self.transform_single(transaction))
+            .collect()
+    }
 }
 
 struct SimpleTransactionTransformer {
@@ -15,12 +40,12 @@ struct SimpleTransactionTransformer {
     transform_fn: Box<dyn Fn(Transaction) -> Vec<Transaction>>,
 }
 
-impl Transformer for SimpleTransactionTransformer {
+impl SingleTransactionTransformer for SimpleTransactionTransformer {
     fn name(&self) -> &str {
         &self.name
     }
 
-    fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
+    fn transform_single(&self, transaction: Transaction) -> Vec<Transaction> {
         (self.transform_fn)(transaction)
     }
 }
@@ -30,7 +55,10 @@ impl Transformer for SimpleTransactionTransformer {
 /// transaction and returns a vector of transactions, allowing for changing
 /// transaction data or splitting. The name parameter is used to identify the
 /// transformer in logs and error messages.
-pub fn create_single_transaction_transformer<F>(name: &str, transform_fn: F) -> impl Transformer
+pub fn create_single_transaction_transformer<F>(
+    name: &str,
+    transform_fn: F,
+) -> impl SingleTransactionTransformer
 where
     F: Fn(Transaction) -> Vec<Transaction> + 'static,
 {
@@ -55,7 +83,10 @@ mod tests {
     fn transformer_returns_configured_name() {
         let transformer = create_single_transaction_transformer("test-transformer", |tx| vec![tx]);
 
-        assert_that!(transformer.name(), eq("test-transformer"));
+        assert_that!(
+            SingleTransactionTransformer::name(&transformer),
+            eq("test-transformer")
+        );
     }
 
     #[test]
@@ -86,7 +117,7 @@ mod tests {
             tags: TagMap::new(),
         };
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(2));
         assert_that!(result[0].description.as_str(), eq("Groceries (updated)"));

@@ -77,10 +77,7 @@ fn apply_transformers(
 ) -> Vec<Transaction> {
     for transformer in transformers {
         info!("Running transformer {}", transformer.name());
-        transactions = transactions
-            .into_iter()
-            .flat_map(|transaction| transformer.transform(transaction))
-            .collect();
+        transactions = transformer.transform(transactions);
         info!("Finished running transformer {}", transformer.name());
     }
 

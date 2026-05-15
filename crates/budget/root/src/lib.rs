@@ -14,6 +14,7 @@ pub use finance_as_code_budget_core::TagMap;
 pub use finance_as_code_budget_core::Transaction;
 
 pub mod transformer {
+    pub use finance_as_code_budget_core::transformer::SingleTransactionTransformer;
     pub use finance_as_code_budget_core::transformer::Transformer;
     pub use finance_as_code_budget_core::transformer::create_single_transaction_transformer;
 }
