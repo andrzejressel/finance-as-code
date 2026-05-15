@@ -1,5 +1,6 @@
 use bon::Builder;
 use finance_as_code_budget_core::Transaction;
+use finance_as_code_budget_core::transformer::SingleTransactionTransformer;
 use finance_as_code_budget_core::transformer::Transformer;
 use finance_as_code_budget_transformer_lua::{DefaultLuaExecutor, LuaExecutor};
 use finance_as_code_utils_file_map::{FileStringMap, JsonFileMap};
@@ -223,7 +224,7 @@ Generate the Lua script now:"#
     }
 }
 
-impl<G, E, KV> Transformer for AiLuaTransformer<G, E, KV>
+impl<G, E, KV> SingleTransactionTransformer for AiLuaTransformer<G, E, KV>
 where
     G: ContentGenerator,
     E: LuaExecutor,
@@ -233,7 +234,7 @@ where
         &self.name
     }
 
-    fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
+    fn transform_single(&self, transaction: Transaction) -> Vec<Transaction> {
         let lua_code = match self.get_lua_code() {
             Ok(code) => code,
             Err(e) => {
@@ -252,6 +253,7 @@ mod tests {
     use super::*;
     use chrono::NaiveDate;
     use finance_as_code_budget_core::TagMap;
+    use finance_as_code_budget_core::transformer::SingleTransactionTransformer;
     use finance_as_code_budget_transformer_lua::MockLuaExecutor;
     use finance_as_code_utils_gemini::MockContentGenerator;
     use googletest::assert_that;
@@ -311,7 +313,10 @@ mod tests {
             temp_file.path(),
         );
 
-        assert_that!(transformer.name(), eq("test-ai-transformer"));
+        assert_that!(
+            SingleTransactionTransformer::name(&transformer),
+            eq("test-ai-transformer")
+        );
     }
 
     #[test]
@@ -352,7 +357,7 @@ mod tests {
         );
 
         let tx = create_test_transaction();
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(1));
         assert_that!(
@@ -399,7 +404,7 @@ mod tests {
         );
 
         let tx = create_test_transaction();
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(1));
         assert_that!(
@@ -445,7 +450,7 @@ mod tests {
         );
 
         let tx = create_test_transaction();
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(1));
         assert_that!(
@@ -494,9 +499,9 @@ mod tests {
         let tx2 = create_test_transaction();
 
         // First call - should generate and cache
-        let _ = transformer.transform(tx1);
+        let _ = transformer.transform_single(tx1);
         // Second call - should use memory cache
-        let _ = transformer.transform(tx2);
+        let _ = transformer.transform_single(tx2);
     }
 
     #[test]
@@ -522,7 +527,7 @@ mod tests {
         );
 
         let tx = create_test_transaction();
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         // Should return empty vector on error
         assert_that!(result.len(), eq(0));

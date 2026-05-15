@@ -1,7 +1,7 @@
 #![doc = include_str!("../../../root/src/docs/lua.md")]
 
 use finance_as_code_budget_core::Transaction;
-use finance_as_code_budget_core::transformer::Transformer;
+use finance_as_code_budget_core::transformer::SingleTransactionTransformer;
 use mlua::Lua;
 use mlua::LuaOptions;
 use mlua::StdLib;
@@ -182,12 +182,12 @@ impl LuaTransformer {
     }
 }
 
-impl Transformer for LuaTransformer {
+impl SingleTransactionTransformer for LuaTransformer {
     fn name(&self) -> &str {
         &self.name
     }
 
-    fn transform(&self, transaction: Transaction) -> Vec<Transaction> {
+    fn transform_single(&self, transaction: Transaction) -> Vec<Transaction> {
         // Create a safe Lua environment without IO, OS, PACKAGE, DEBUG, and COROUTINE
         // libraries This prevents scripts from performing file I/O, executing
         // system commands, loading packages, using debug introspection, or
@@ -256,6 +256,7 @@ mod tests {
     use super::*;
     use chrono::NaiveDate;
     use finance_as_code_budget_core::TagMap;
+    use finance_as_code_budget_core::transformer::SingleTransactionTransformer;
     use googletest::prelude::*;
     use rusty_money::Money;
     use rusty_money::iso::USD;
@@ -327,7 +328,10 @@ mod tests {
     fn transformer_returns_configured_name() {
         let transformer = LuaTransformer::new("test-lua-transformer", "return transaction");
 
-        assert_that!(transformer.name(), eq("test-lua-transformer"));
+        assert_that!(
+            SingleTransactionTransformer::name(&transformer),
+            eq("test-lua-transformer")
+        );
     }
 
     #[test]
@@ -339,7 +343,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(1));
         assert_that!(
@@ -362,7 +366,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(2));
         assert_that!(result[0].description.as_str(), eq("Test transaction"));
@@ -375,7 +379,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(0));
     }
@@ -393,7 +397,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         assert_that!(result.len(), eq(2));
 
@@ -584,7 +588,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         // Safe operations should work
         assert_that!(result.len(), eq(1));
@@ -603,7 +607,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         // Safe operations should work
         assert_that!(result.len(), eq(1));
@@ -623,7 +627,7 @@ mod tests {
         let transformer = LuaTransformer::new("test", script);
         let tx = create_test_transaction();
 
-        let result = transformer.transform(tx);
+        let result = transformer.transform_single(tx);
 
         // Safe operations should work
         assert_that!(result.len(), eq(1));
