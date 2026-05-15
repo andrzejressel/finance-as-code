@@ -22,6 +22,7 @@ finance_as_code_budget_sink_treeline = { workspace = true, optional = true }
 finance_as_code_budget_sink_lunchmoney = { workspace = true, optional = true }
 finance_as_code_budget_transformer_lua.workspace = true
 finance_as_code_budget_transformer_ai_lua.workspace = true
+finance_as_code_budget_transformer_squasher.workspace = true
 duckdb = { workspace = true, optional = true, features = ["bundled"] }
 
 [dev-dependencies]

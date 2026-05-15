@@ -1395,6 +1395,7 @@ dependencies = [
  "finance_as_code_budget_source_mbank",
  "finance_as_code_budget_transformer_ai_lua",
  "finance_as_code_budget_transformer_lua",
+ "finance_as_code_budget_transformer_squasher",
  "finance_as_code_utils_hmap",
  "rusty-money",
  "uuid",
@@ -1517,6 +1518,20 @@ dependencies = [
  "mlua",
  "mockall",
  "rootcause",
+ "rusty-money",
+ "uuid",
+]
+
+[[package]]
+name = "finance_as_code_budget_transformer_squasher"
+version = "0.0.0-DEV"
+dependencies = [
+ "bon",
+ "chrono",
+ "finance_as_code_budget_core",
+ "googletest",
+ "log",
+ "rust_decimal",
  "rusty-money",
  "uuid",
 ]

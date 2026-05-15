@@ -55,6 +55,12 @@ pub mod transformer_ai_lua {
     pub use finance_as_code_budget_transformer_ai_lua::create_ai_lua_builder;
 }
 
+#[doc = include_str!("docs/squasher.md")]
+pub mod transformer_squasher {
+    pub use finance_as_code_budget_transformer_squasher::SquasherConfig;
+    pub use finance_as_code_budget_transformer_squasher::create_squasher;
+}
+
 #[cfg(feature = "sink_lunchmoney")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "sink_lunchmoney", feature = "all"))))]
 #[doc = include_str!("docs/lunchmoney.md")]
