@@ -1,5 +1,3 @@
-#![doc = include_str!("../../../root/src/docs/squasher.md")]
-
 use bon::Builder;
 use chrono::NaiveDate;
 use finance_as_code_budget_core::TagMap;

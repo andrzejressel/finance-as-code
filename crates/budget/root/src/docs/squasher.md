@@ -8,9 +8,9 @@ Use it when you want to compress many entries (for example daily card authorizat
 
 ```rust,no_run
 use chrono::NaiveDate;
-use finance_as_code_budget_core::run;
-# use finance_as_code_budget_core::__private::{create_sink, create_source};
-use finance_as_code_budget_core::transformer_squasher::{SquasherConfig, create_squasher};
+use finance_as_code_budget::run;
+# use finance_as_code_budget::__private::{create_sink, create_source};
+use finance_as_code_budget::transformer_squasher::{SquasherConfig, create_squasher};
 
 fn main() {
     let squasher = create_squasher(
