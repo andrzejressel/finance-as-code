@@ -5,7 +5,7 @@ This module provides [`lua::LuaTransformer`] that executes Lua scripts against f
 ## Quick Start
 
 ```rust
-use finance_as_code_budget_core::{Transaction, transformer::Transformer};
+use finance_as_code_budget_core::{Transaction, transformer::SingleTransactionTransformer};
 use finance_as_code_budget_transformer_lua::LuaTransformer;
 use rusty_money::{Money, iso::USD};
 use chrono::NaiveDate;
@@ -30,7 +30,7 @@ let tx = Transaction {
     tags: finance_as_code_utils_hmap::HMap::new(),
 };
 
-let results = transformer.transform(tx);
+let results = transformer.transform_single(tx);
 assert_eq!(results[0].tags.get::<String>(&"category".to_string()).unwrap(), "food-drink");
 ```
 
@@ -64,7 +64,7 @@ Your Lua scripts have access to a global `transaction` object with these propert
 ### Modify description and add tags
 
 ```rust
-use finance_as_code_budget_core::{Transaction, transformer::Transformer};
+use finance_as_code_budget_core::{Transaction, transformer::SingleTransactionTransformer};
 use finance_as_code_budget_transformer_lua::LuaTransformer;
 use rusty_money::{Money, iso::USD};
 use chrono::NaiveDate;
@@ -85,14 +85,14 @@ let tx = Transaction {
     other_side_account_number: None,
     tags: finance_as_code_utils_hmap::HMap::new(),
 };
-let result = transformer.transform(tx);
+let result = transformer.transform_single(tx);
 assert_eq!(result[0].description, "Coffee [PROCESSED]");
 ```
 
 ### Split transaction into multiple parts
 
 ```rust
-use finance_as_code_budget_core::{Transaction, transformer::Transformer};
+use finance_as_code_budget_core::{Transaction, transformer::SingleTransactionTransformer};
 use finance_as_code_budget_transformer_lua::LuaTransformer;
 use rusty_money::{Money, iso::USD};
 use chrono::NaiveDate;
@@ -116,7 +116,7 @@ let tx = Transaction {
     other_side_account_number: None,
     tags: finance_as_code_utils_hmap::HMap::new(),
 };
-let results = transformer.transform(tx);
+let results = transformer.transform_single(tx);
 assert_eq!(results.len(), 2);
 assert!(results[1].description.starts_with("Tax:"));
 ```
@@ -124,7 +124,7 @@ assert!(results[1].description.starts_with("Tax:"));
 ### Filter out transactions
 
 ```rust
-use finance_as_code_budget_core::{Transaction, transformer::Transformer};
+use finance_as_code_budget_core::{Transaction, transformer::SingleTransactionTransformer};
 use finance_as_code_budget_transformer_lua::LuaTransformer;
 use rusty_money::{Money, iso::USD};
 use chrono::NaiveDate;
@@ -146,14 +146,14 @@ let tx = Transaction {
     other_side_account_number: None,
     tags: finance_as_code_utils_hmap::HMap::new(),
 };
-let results = transformer.transform(tx);
+let results = transformer.transform_single(tx);
 assert_eq!(results.len(), 0);  // Transaction was dropped
 ```
 
 ### Pattern matching and categorization
 
 ```rust
-use finance_as_code_budget_core::{Transaction, transformer::Transformer};
+use finance_as_code_budget_core::{Transaction, transformer::SingleTransactionTransformer};
 use finance_as_code_budget_transformer_lua::LuaTransformer;
 use rusty_money::{Money, iso::USD};
 use chrono::NaiveDate;
@@ -178,7 +178,7 @@ let tx = Transaction {
     other_side_account_number: None,
     tags: finance_as_code_utils_hmap::HMap::new(),
 };
-let results = transformer.transform(tx);
+let results = transformer.transform_single(tx);
 assert_eq!(results[0].tags.get::<String>(&"category".to_string()).unwrap(), "transport");
 ```
 
@@ -187,7 +187,7 @@ assert_eq!(results[0].tags.get::<String>(&"category".to_string()).unwrap(), "tra
 If a Lua script fails (syntax error, runtime error, etc.), an error is printed to stderr and an empty vector is returned. The original transaction cannot be recovered.
 
 ```rust
-use finance_as_code_budget_core::{Transaction, transformer::Transformer};
+use finance_as_code_budget_core::{Transaction, transformer::SingleTransactionTransformer};
 use finance_as_code_budget_transformer_lua::LuaTransformer;
 use rusty_money::{Money, iso::USD};
 use chrono::NaiveDate;
@@ -204,6 +204,6 @@ let tx = Transaction {
     other_side_account_number: None,
     tags: finance_as_code_utils_hmap::HMap::new(),
 };
-let results = transformer.transform(tx);
+let results = transformer.transform_single(tx);
 assert_eq!(results.len(), 0);  // Error = empty results
 ```
