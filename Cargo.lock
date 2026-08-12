@@ -319,9 +319,9 @@ dependencies = [
 
 [[package]]
 name = "askama"
-version = "0.15.4"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08e1676b346cadfec169374f949d7490fd80a24193d37d2afce0c047cf695e57"
+checksum = "f1bf825125edd887a019d0a3a837dcc5499a68b0d034cc3eb594070c3e18addc"
 dependencies = [
  "askama_macros",
  "itoa",
@@ -332,12 +332,13 @@ dependencies = [
 
 [[package]]
 name = "askama_derive"
-version = "0.15.4"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7661ff56517787343f376f75db037426facd7c8d3049cef8911f1e75016f3a37"
+checksum = "e1c7065972a130eafa84215f21352ae15b4a7393da48c1f5e103904490736738"
 dependencies = [
  "askama_parser",
  "basic-toml",
+ "glob",
  "memchr",
  "proc-macro2",
  "quote",
@@ -349,24 +350,24 @@ dependencies = [
 
 [[package]]
 name = "askama_macros"
-version = "0.15.4"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "713ee4dbfd1eb719c2dab859465b01fa1d21cb566684614a713a6b7a99a4e47b"
+checksum = "0e23b1d2c4bd39a41971f6124cef4cc6fd0540913ecb90919b69ab3bbe44ae1a"
 dependencies = [
  "askama_derive",
 ]
 
 [[package]]
 name = "askama_parser"
-version = "0.15.4"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d62d674238a526418b30c0def480d5beadb9d8964e7f38d635b03bf639c704c"
+checksum = "7db09fde9143e7ac4513358fb32ee32847125b63b18ea715afd487956da715da"
 dependencies = [
  "rustc-hash",
  "serde",
  "serde_derive",
  "unicode-ident",
- "winnow",
+ "winnow 1.0.4",
 ]
 
 [[package]]
@@ -582,7 +583,7 @@ version = "3.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dee98b0db6a962de883bf5d20362dee4d7ca0d12fe39a7c6c73c844e1cd7c1f"
 dependencies = [
- "darling 0.20.11",
+ "darling 0.21.3",
  "ident_case",
  "prettyplease",
  "proc-macro2",
@@ -1878,6 +1879,12 @@ dependencies = [
  "wasip2",
  "wasip3",
 ]
+
+[[package]]
+name = "glob"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
 name = "googletest"
@@ -3271,13 +3278,13 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_build"
-version = "0.0.7"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c15a6f799f2984ae4728510a5c9516e74af7d90bdd941ff051075660959636b0"
+checksum = "d60eebceb0129adba961e5f9e14c0ad0866abddaa5ae06269fe7d9b2bd9a780a"
 dependencies = [
  "anyhow",
  "pulumi_gestalt_generator",
- "pulumi_gestalt_schema",
+ "pulumi_gestalt_schema 0.0.12",
  "tempfile",
 ]
 
@@ -3307,9 +3314,9 @@ dependencies = [
 
 [[package]]
 name = "pulumi_gestalt_generator"
-version = "0.0.7"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3f86d1bd1909f1ff457d8cc26579870a38118cad7fd3a9edab1727150932697"
+checksum = "5ece53f658b83dd73cd9be5ec470a50c4c2b47fed0ff48effeddc8473d7d36b3"
 dependencies = [
  "anyhow",
  "askama",
@@ -3319,7 +3326,7 @@ dependencies = [
  "pathdiff",
  "prettyplease",
  "proc-macro2",
- "pulumi_gestalt_schema",
+ "pulumi_gestalt_schema 0.0.12",
  "quote",
  "regex",
  "serde",
@@ -3369,7 +3376,7 @@ dependencies = [
  "anyhow",
  "bon",
  "pulumi_gestalt_rust_integration",
- "pulumi_gestalt_serde_constant_string",
+ "pulumi_gestalt_serde_constant_string 0.0.7",
  "serde",
  "serde_json",
  "tokio",
@@ -3388,7 +3395,7 @@ dependencies = [
  "pulumi_gestalt_domain",
  "pulumi_gestalt_grpc_connection",
  "pulumi_gestalt_proto",
- "pulumi_gestalt_schema",
+ "pulumi_gestalt_schema 0.0.7",
  "serde_json",
  "static_assertions",
  "tokio",
@@ -3404,7 +3411,22 @@ dependencies = [
  "anyhow",
  "convert_case 0.11.0",
  "itertools",
- "pulumi_gestalt_serde_constant_string",
+ "pulumi_gestalt_serde_constant_string 0.0.7",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
+name = "pulumi_gestalt_schema"
+version = "0.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34b4dcb30a2a514d04ed07a83c5d6a84ef85837253dbd4046f55131d82dfdf33"
+dependencies = [
+ "anyhow",
+ "convert_case 0.11.0",
+ "itertools",
+ "pulumi_gestalt_serde_constant_string 0.0.12",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -3415,6 +3437,15 @@ name = "pulumi_gestalt_serde_constant_string"
 version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c56ea43ff3307f1511234e11a6becad4c4a9f3529e92e1d640ec978ecca55c87"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "pulumi_gestalt_serde_constant_string"
+version = "0.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3eac37b6f45e38f6a324d431d240a001accadf46f43442d65a7c33bca32b1421"
 dependencies = [
  "serde",
 ]
@@ -4716,7 +4747,7 @@ dependencies = [
  "indexmap 2.13.0",
  "toml_datetime",
  "toml_parser",
- "winnow",
+ "winnow 0.7.14",
 ]
 
 [[package]]
@@ -4725,7 +4756,7 @@ version = "1.0.7+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "247eaa3197818b831697600aadf81514e577e0cba5eab10f7e064e78ae154df1"
 dependencies = [
- "winnow",
+ "winnow 0.7.14",
 ]
 
 [[package]]
@@ -5472,6 +5503,15 @@ name = "winnow"
 version = "0.7.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5364e9d77fcdeeaa6062ced926ee3381faa2ee02d3eb83a5c27a8825540829"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "winnow"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 dependencies = [
  "memchr",
 ]
